@@ -13,26 +13,31 @@
                 type: String,
                 default: 'horizontal'
             }
+
         2. 当前列表特定元素的dom： activeEvent： ''
             activeEvent: {
                 type: Event,
                 default: undefined
             }
+
         3. 所传入的DOM的位置： activeTargetPos： center/left/right (默认center)
             activeTargetPos: {
                 type: String,
                 default: 'center'
             }
+
         4. 滚动过程中的回调函数
                 moveCallback: {
                     type: Function,
                     default: i => 0
                 }
+
         5. 滚动完成释放touch的回调函数
                 afterRelease: {
                     type: Function,
                     default: i => 0
                 }
+                
         6. 滚动至尾部是否展示阴影效果（仅对水平滑动有效）
                 moreShadow: {
                     type: Boolean,
