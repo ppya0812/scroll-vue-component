@@ -1,4 +1,4 @@
-require('./Scroll.less');
+require('./scroll.less');
 let defaultDuration = 300;
 
 export default {

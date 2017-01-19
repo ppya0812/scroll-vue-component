@@ -1,0 +1,25 @@
+{
+  "name": "scroll-vue-component",
+  "version": "1.0.0",
+  "description": "scroll for vue",
+  "main": "scroll-vue.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ppya0812/scroll-vue-component.git"
+  },
+  "keywords": [
+    "scroll",
+    "vue",
+    "move",
+    "component"
+  ],
+  "author": "ppya0812@163.com",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/ppya0812/scroll-vue-component/issues"
+  },
+  "homepage": "https://github.com/ppya0812/scroll-vue-component#readme"
+}
