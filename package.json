@@ -1,6 +1,6 @@
 {
   "name": "scroll-vue-component",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "scroll for vue",
   "main": "scroll-vue.js",
   "scripts": {
@@ -11,10 +11,9 @@
     "url": "git+https://github.com/ppya0812/scroll-vue-component.git"
   },
   "keywords": [
-    "scroll",
     "vue",
-    "move",
-    "component"
+    "scroll",
+    "move"
   ],
   "author": "ppya0812@163.com",
   "license": "ISC",

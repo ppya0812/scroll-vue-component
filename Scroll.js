@@ -1,15 +1,12 @@
 require('./scroll.less');
-let defaultDuration = 300;
 
 export default {
     data() {
         return {
             trackStyle: {
-                transform: 'translate(0px, 0px) translateZ(0px)',
-                transitionDuration: 0
+                transform: 'translate(0px, 0px) translateZ(0px)'
             },
             oldScroll: 0,
-            transitionDuration: defaultDuration,
             maxScrollDis: 0
         };
     },
@@ -35,7 +32,12 @@ export default {
             default: i => 0
         },
         afterRelease: {
-            // 滚动完成回调
+            // 列表尾部滚动完成回调
+            type: Function,
+            default: i => 0
+        },
+        beforeRelease: {
+            // 列表头部滚动完成回调
             type: Function,
             default: i => 0
         },
@@ -114,13 +116,11 @@ export default {
             const yd = this.y - y;
             const axd = Math.abs(xd);
             const ayd = Math.abs(yd);
-            // const sqrtAbs = Math.floor(Math.sqrt(xd * xd + yd * yd));
             return {
                 deltaX: xd,
                 deltaY: yd,
                 absX: axd,
                 absY: ayd
-                // sqrtAbs: sqrtAbs
             };
         },
         calcScroll() {
@@ -155,8 +155,7 @@ export default {
         },
         scrollTo(translateX = 0, translateY = 0) {
             this.trackStyle = {
-                transform: 'translate(' + translateX + 'px, ' + translateY + 'px) translateZ(0px) translate3d(0, 0, 0)',
-                transitionDuration: this.transitionDuration + 'ms'
+                transform: `translate(${translateX / 2}px, ${translateY / 2}px) translateZ(0px) translate3d(0, 0, 0)`
             };
         },
         onTouchstart(e) {
@@ -167,22 +166,17 @@ export default {
             this.y = e.touches[0].clientY;
         },
         onTouchmove(e) {
+            e.preventDefault();
             const pos = this.calcPos(e);
             if ((this.scrollDirection === 'horizontal' && pos.absX <= pos.absY)
                 || (this.scrollDirection === 'vertical' && pos.absX >= pos.absY)) {
                     return;
                 }
-            e.preventDefault();
             if (this.scrollDirection === 'horizontal') {
                 // 水平
                 const X = pos.deltaX + this.oldScroll;
-                let scrollX;
-                if (X > 0) {
-                    scrollX = -Math.min(X, Math.abs(this.maxScrollDis) * 1.1);
-                }
-                else {
-                    scrollX = Math.min(Math.abs(X),  Math.abs(this.maxScrollDis) * 0.5);
-                }
+                const rateX = X / Math.abs(this.maxScrollDis);
+                const scrollX = -(X + rateX);
                 this.scrollTo(scrollX, 0);
                 // 回弹阴影效果大小
                 if (this.moreShadow) {
@@ -192,13 +186,8 @@ export default {
             else if (this.scrollDirection === 'vertical') {
                 // 垂直
                 const Y = pos.deltaY + this.oldScroll;
-                let scrollY;
-                if (Y > 0) {
-                    scrollY = -Math.min(Y, Math.abs(this.maxScrollDis) * 1.5);
-                }
-                else {
-                    scrollY = Math.min(Math.abs(Y),  Math.abs(this.maxScrollDis) * 0.5);
-                }
+                const rateY = Y / Math.abs(this.maxScrollDis);
+                const scrollY = -(Y + rateY);
                 this.scrollTo(0, scrollY);
                 // 回弹阴影效果大小
                 // if (this.moreShadow) {
@@ -211,12 +200,12 @@ export default {
             }
         },
         onTouchend(e) {
+            this.path = this.calcPath(0);
             const pos = this.calcPos(e);
             if ((this.scrollDirection === 'horizontal' && pos.absX <= pos.absY)
                 || (this.scrollDirection === 'vertical' && pos.absX >= pos.absY)) {
                     return;
                 }
-            e.preventDefault();
             if (this.scrollDirection === 'horizontal') {
                 const X = pos.deltaX + this.oldScroll;
                 let scrollX;
@@ -228,11 +217,14 @@ export default {
                 }
                 this.oldScroll = -scrollX;
                 this.scrollTo(scrollX, 0);
-                this.path = this.calcPath(0);
                 // 滚动完成回调
-                if (typeof this.afterRelease === 'function'
-                    && (-scrollX === this.maxScrollDis || (X > 0 && this.maxScrollDis < 0))) {
-                    this.afterRelease();
+                if (typeof this.afterRelease === 'function') {
+                    if (-scrollX === this.maxScrollDis || (X > 0 && this.maxScrollDis < 0)) {
+                        this.afterRelease();
+                    }
+                    else if (Math.abs(X) > Math.abs(this.maxScrollDis)) {
+                        this.beforeRelease();
+                    }
                 }
             }
             else if (this.scrollDirection === 'vertical') {
@@ -247,16 +239,17 @@ export default {
                 }
                 this.oldScroll = -scrollY;
                 this.scrollTo(0, scrollY);
-                // this.path = this.calcPath(0);
                 // 滚动完成回调
-                if (typeof this.afterRelease === 'function'
-                    && (-scrollY === this.maxScrollDis || (Y > 0 && this.maxScrollDis < 0))) {
-                    this.afterRelease();
+                if (typeof this.afterRelease === 'function') {
+                    if (-scrollY === this.maxScrollDis || (Y > 0 && this.maxScrollDis < 0)) {
+                        this.afterRelease();
+                    }
+                    else if (Math.abs(Y) > Math.abs(this.maxScrollDis)) {
+                        this.beforeRelease();
+                    }
                 }
+
             }
-        },
-        onTouchcancel(e) {
-            console.log('onTouchcancel', e.touches[0]);
         }
     },
     render(h) {
@@ -278,7 +271,6 @@ export default {
                     on-touchstart={this.onTouchstart}
                     on-touchmove={this.onTouchmove}
                     on-touchend={this.onTouchend}
-                    on-touchcancel={this.onTouchcancel}
                 >
                     {
                         this.$slots.default.map(vnode => {

@@ -6,7 +6,7 @@
         2. 滚动元素定位到某一项（居左，居中，居右，居上、居下）
         3. 滚动至尾部回弹阴影效果
         4. 滚动时回调
-        5. 滚动完成回调
+        5. 滚动完成回调 （支持列表头部和列表尾部滚动完成的回调）
 
 ## 需传入props参数：
 
@@ -36,13 +36,18 @@
                     default: i => 0
                 }
 
-    5. 滚动完成释放touch的回调函数
+    5. 列表尾部滚动完成释放touch的回调函数
                 afterRelease: {
                     type: Function,
                     default: i => 0
                 }
+    6. 列表头部滚动完成释放touch的回调函数
+                beforeRelease: {
+                    type: Function,
+                    default: i => 0
+                }
 
-    6. 滚动至尾部是否展示阴影效果（仅对水平滑动有效）
+    7. 滚动至尾部是否展示阴影效果（仅对水平滑动有效）
                 moreShadow: {
                     type: Boolean,
                     default: false
