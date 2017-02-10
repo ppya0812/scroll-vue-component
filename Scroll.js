@@ -4,7 +4,8 @@ export default {
     data() {
         return {
             trackStyle: {
-                transform: 'translate(0px, 0px) translateZ(0px)'
+                transform: 'translate(0px, 0px) translateZ(0px)',
+                transitionDuration: '0ms'
             },
             oldScroll: 0,
             maxScrollDis: 0
@@ -153,20 +154,23 @@ export default {
             let x = scrollX < 0 ? Math.max(Math.floor(90 + scrollX / 30), 92) : 100;
             return `M100 0 C ${x} 5, ${x} 95, 100 100`;
         },
-        scrollTo(translateX = 0, translateY = 0) {
+        scrollTo(translateX = 0, translateY = 0, timeStamp = 0) {
             this.trackStyle = {
-                transform: `translate(${translateX / 2}px, ${translateY / 2}px) translateZ(0px) translate3d(0, 0, 0)`
+                transform: `translate(${translateX}px, ${translateY}px) translateZ(0px)`,
+                transitionDuration: `${timeStamp}ms`
             };
+            if (timeStamp) {
+                setTimeout(() => {
+                    this.trackStyle.transitionDuration = '0ms';
+                }, 600);
+            }
         },
         onTouchstart(e) {
-            if (e.touches.length > 1) {
-                return;
-            }
-            this.x = e.touches[0].clientX;
-            this.y = e.touches[0].clientY;
+            const point = e.touches ? e.touches[0] : e;
+            this.x = point.clientX;
+            this.y = point.clientY;
         },
         onTouchmove(e) {
-            e.preventDefault();
             const pos = this.calcPos(e);
             if ((this.scrollDirection === 'horizontal' && pos.absX <= pos.absY)
                 || (this.scrollDirection === 'vertical' && pos.absX >= pos.absY)) {
@@ -175,9 +179,16 @@ export default {
             if (this.scrollDirection === 'horizontal') {
                 // 水平
                 const X = pos.deltaX + this.oldScroll;
-                const rateX = X / Math.abs(this.maxScrollDis);
-                const scrollX = -(X + rateX);
-                this.scrollTo(scrollX, 0);
+                const scrollX = Math.round(X + (this.maxScrollDis - X) / 5);
+                // 手势判断
+                if (this.scrollX < scrollX) {
+                    this.directionX = -1; // 手势向左
+                }
+                else {
+                    this.directionX = 1; // 手势向右
+                }
+                this.scrollX = scrollX;
+                this.scrollTo(-scrollX, 0);
                 // 回弹阴影效果大小
                 if (this.moreShadow) {
                     this.path = this.calcPath(scrollX);
@@ -186,9 +197,16 @@ export default {
             else if (this.scrollDirection === 'vertical') {
                 // 垂直
                 const Y = pos.deltaY + this.oldScroll;
-                const rateY = Y / Math.abs(this.maxScrollDis);
-                const scrollY = -(Y + rateY);
-                this.scrollTo(0, scrollY);
+                const scrollY =  Math.round(Y + (this.maxScrollDis - Y) / 5);
+                // 手势判断
+                if (this.scrollY < scrollY) {
+                    this.directionY = -1; // 手势向上
+                }
+                else {
+                    this.directionY = 1; // 手势向下
+                }
+                this.scrollY = scrollY;
+                this.scrollTo(0, -scrollY);
                 // 回弹阴影效果大小
                 // if (this.moreShadow) {
                 //     this.path = this.calcPath(scrollY);
@@ -198,6 +216,7 @@ export default {
             if (typeof this.moveCallback === 'function') {
                 this.moveCallback();
             }
+            this.startTime = Date.now();
         },
         onTouchend(e) {
             this.path = this.calcPath(0);
@@ -208,47 +227,50 @@ export default {
                 }
             if (this.scrollDirection === 'horizontal') {
                 const X = pos.deltaX + this.oldScroll;
-                let scrollX;
-                if (X > 0) {
-                    scrollX = -Math.min(X, Math.max(this.maxScrollDis, 0));
+                let scrollX =  Math.round(X + (this.maxScrollDis - X) / 5);
+                if (scrollX > 0) {
+                    scrollX = scrollX > this.maxScrollDis ? this.maxScrollDis : scrollX;
                 }
                 else {
-                    scrollX = Math.min(Math.abs(X), 0);
+                    scrollX = 0;
                 }
-                this.oldScroll = -scrollX;
-                this.scrollTo(scrollX, 0);
+                this.oldScroll = scrollX;
+                this.scrollTo(-scrollX, 0, 600);
                 // 滚动完成回调
-                if (typeof this.afterRelease === 'function') {
-                    if (-scrollX === this.maxScrollDis || (X > 0 && this.maxScrollDis < 0)) {
-                        this.afterRelease();
-                    }
-                    else if (Math.abs(X) > Math.abs(this.maxScrollDis)) {
-                        this.beforeRelease();
-                    }
+                if (typeof this.afterRelease === 'function'
+                    && !~this.directionX
+                    && (scrollX === this.maxScrollDis || (X > 0 && this.maxScrollDis < 0))) {
+                    this.afterRelease();
+                }
+                else if (typeof this.beforeRelease === 'function'
+                        && this.directionX === 1
+                        && X < -50) {
+                    this.beforeRelease();
                 }
             }
             else if (this.scrollDirection === 'vertical') {
                 // 垂直
                 const Y = pos.deltaY + this.oldScroll;
-                let scrollY;
-                if (Y > 0) {
-                    scrollY = -Math.min(Y, Math.max(this.maxScrollDis, 0));
+                let scrollY = Math.round(Y + (this.maxScrollDis - Y) / 5);
+                if (scrollY > 0) {
+                    scrollY = scrollY > this.maxScrollDis ? this.maxScrollDis : scrollY;
                 }
                 else {
-                    scrollY = Math.min(Math.abs(Y), 0);
+                    scrollY = 0;
                 }
-                this.oldScroll = -scrollY;
-                this.scrollTo(0, scrollY);
+                this.oldScroll = scrollY;
+                this.scrollTo(-scrollY, 0, 600);
                 // 滚动完成回调
-                if (typeof this.afterRelease === 'function') {
-                    if (-scrollY === this.maxScrollDis || (Y > 0 && this.maxScrollDis < 0)) {
-                        this.afterRelease();
-                    }
-                    else if (Math.abs(Y) > Math.abs(this.maxScrollDis)) {
-                        this.beforeRelease();
-                    }
+                if (typeof this.afterRelease === 'function'
+                    && !~this.directionY
+                    && (scrollY === this.maxScrollDis || (Y > 0 && this.maxScrollDis < 0))) {
+                    this.afterRelease();
                 }
-
+                else if (typeof this.beforeRelease === 'function'
+                        && this.directionY === 1
+                        && Y < -50) {
+                    this.beforeRelease();
+                }
             }
         }
     },
@@ -288,15 +310,16 @@ export default {
         );
     },
     mounted() {
-        const scrollEle = this.$refs.scroll;
-        if (scrollEle) {
+        const scroller = this.$refs.scroll;
+        const wrapper = this.$refs.scroll.parentElement;
+        if (scroller) {
             if (this.scrollDirection === 'vertical') {
                 // 垂直滚动
-                this.maxScrollDis = scrollEle.clientHeight - scrollEle.parentElement.clientHeight;
+                this.maxScrollDis = scroller.clientHeight - wrapper.clientHeight;
             }
             else {
                 // 水平滚动
-                this.maxScrollDis = scrollEle.clientWidth - scrollEle.parentElement.clientWidth;
+                this.maxScrollDis = scroller.clientWidth - wrapper.clientWidth;
             }
         }
     }
