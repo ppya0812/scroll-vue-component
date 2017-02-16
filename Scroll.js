@@ -3,27 +3,51 @@ require('./scroll.less');
 export default {
     data() {
         return {
-            trackStyle: {
+            scrollerStyle: {
                 transform: 'translate(0px, 0px) translateZ(0px)',
                 transitionDuration: '0ms'
             },
-            oldScroll: 0,
-            maxScrollDis: 0
+            timer: null,
+            maxScrollX: 0,
+            maxScrollY: 0,
+            startX: 0,
+            startY: 0,
+            distX: 0,
+            distY: 0,
+            x: 0,
+            y: 0,
+            directionX: 0,
+            directionY: 0,
+            endTime: 0,
+            ircular: {
+                style: 'cubic-bezier(0.1, 0.57, 0.1, 1)',	// Not properly "circular" but this looks better, it should be (0.075, 0.82, 0.165, 1)
+                fn: function (k) {
+                    return Math.sqrt(1 - (--k * k));
+                }
+            }
+            // quadratic: {
+            //     style: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+            //     fn: function (k) {
+            //         return k * (2 - k);
+            //     }
+            // }
         };
     },
     props: {
         scrollDirection: {
             type: String,
-            // default: 'vertical'
-            default: 'horizontal'
+            default: 'horizontal'  // 滑动方向  h为水平， v为垂直方向
         },
         activeTargetPos: {
-            // 当前dom位置
             type: String,
-            default: 'center'
+            default: 'center'  // active dom位置
+        },
+        moreShadow: {
+            type: Boolean,
+            default: false  // 阴影部分展示
         },
         activeEvent: {
-            // 当前dom位置
+            // active dom
             type: Event,
             default: undefined
         },
@@ -41,234 +65,279 @@ export default {
             // 列表头部滚动完成回调
             type: Function,
             default: i => 0
-        },
-        moreShadow: {
-            // 阴影效果
-            type: Boolean,
-            default: false
         }
     },
     watch: {
         activeEvent() {
-            const {activeEvent, scrollDirection, activeTargetPos, maxScrollDis} = this;
-            if (activeEvent) {
-                const scrollData = this.calcScroll();
-                const {L, pleft, cpLDis, actW, actPW, T, ptop, cpTDis, actH, actPH} = scrollData;
-                if (scrollDirection === 'horizontal') {
-                    let actDis;
-                    let translateX;
-                    switch (activeTargetPos) {
-                        case 'left':
-                            actDis = 0;
-                            translateX = Math.floor(cpLDis - actDis - actW);
-                            break;
-                        case 'right':
-                            actDis = actPW - actW;
-                            translateX = Math.floor(cpLDis - actDis + actW);
-                            break;
-                        case 'center':
-                            actDis = Math.floor(actPW * .5);
-                            translateX = Math.floor(L - actDis - pleft);
-                            break;
-                        default:
-                            actDis = Math.floor(actPW * .5);
-                            translateX = Math.floor(actDis - L + pleft);
-                    }
-                    if (pleft > 0 || translateX < 0) {
-                        return;
-                    }
-                    translateX = -Math.min(maxScrollDis + actW, translateX);
-                    this.scrollTo(translateX, 0);
-                }
-                else if (scrollDirection === 'vertical') {
-                    let actDis;
-                    let translateY;
-                    switch (activeTargetPos) {
-                        case 'top':
-                            actDis = 0;
-                            translateY = Math.floor(cpTDis - actDis - actH);
-                            break;
-                        case 'bottom':
-                            actDis = actPH - actH;
-                            translateY = Math.floor(cpTDis - actDis + actH);
-                            break;
-                        case 'center':
-                            actDis = Math.floor(actPH * .5);
-                            translateY = Math.floor(T - actDis - ptop);
-                            break;
-                        default:
-                            actDis = Math.floor(actPH * .5);
-                            translateY = Math.floor(T - actDis - ptop);
-                    }
-                    if (ptop > 0 || translateY < 0) {
-                        return;
-                    }
-                    translateY = -Math.min(maxScrollDis + actPH, translateY);
-                    this.scrollTo(0, translateY);
-                }
+            const {activeEvent, wrapperWidth, maxScrollX, activeTargetPos} = this;
+            const activeTarget = activeEvent.target;
+            const actPW = Math.min(wrapperWidth, document.body.clientWidth); // 滚动块的显示区域
+            const actW = activeTarget.clientWidth; // 当前元素内容
+            let newX = activeTarget.offsetLeft - actPW / 2;
+            switch (activeTargetPos) {
+                case 'left':
+                    newX = activeTarget.offsetLeft - actPW / 5;
+                    break;
+                case 'right':
+                    newX = activeTarget.offsetLeft - actPW * 2 / 3;
+                    break;
+                case 'center':
+                    newX = activeTarget.offsetLeft - actPW / 2;
+                    break;
+                default:
+                    newX = activeTarget.offsetLeft - actPW / 2;
             }
+            newX = newX < 0 ? 0 : (newX > actW - maxScrollX ? -this.x : newX);
+            this.translateTo(-newX, 0, 400);
         }
     },
     methods: {
-        calcPos(e) {
-            const x = e.changedTouches[0].clientX;
-            const y = e.changedTouches[0].clientY;
-            const xd = this.x - x;
-            const yd = this.y - y;
-            const axd = Math.abs(xd);
-            const ayd = Math.abs(yd);
+        momentum(current, start, time, lowerMargin, wrapperSize, deceleration) {
+            let distance = current - start;
+            const speed = Math.abs(distance) / time;
+            // 减速变量
+            deceleration = deceleration === undefined ? 0.0006 : deceleration;
+            // 减速路程
+            let destination = current + (speed * speed) / (2 * deceleration) * (distance < 0 ? -1 : 1);
+            // 持续时间
+            let duration = speed / deceleration;
+            if (destination < lowerMargin) {
+                destination = wrapperSize ? lowerMargin - (wrapperSize / 2.5 * (speed / 8)) : lowerMargin;
+                distance = Math.abs(destination - current);
+                duration = distance / speed;
+            }
+            else if (destination > 0) {
+                // 向右
+                // destination = wrapperSize ? wrapperSize / 2.5 * (speed / 8) : 0;
+                destination = 0;
+                distance = Math.abs(current) + destination;
+                duration = distance / speed;
+            }
             return {
-                deltaX: xd,
-                deltaY: yd,
-                absX: axd,
-                absY: ayd
+                destination: Math.floor(destination),
+                duration: Math.min(Math.round(duration), 300)
             };
         },
-        calcScroll() {
-            const activeTarget = this.activeEvent.target;
-            const scrollEle = this.$refs.scroll;
-            const actW = activeTarget.clientWidth; // 当前元素内容
-            const actH = activeTarget.clientHeight;
-            const actPW = Math.min(scrollEle.parentElement.clientWidth, document.body.clientWidth); // 滚动块的显示区域
-            const actPH = Math.min(scrollEle.parentElement.clientHeight, document.body.clientHeight);
-            const L = Math.floor(activeTarget.getBoundingClientRect().left); // 当前元素距视口距离
-            const T = Math.floor(activeTarget.getBoundingClientRect().top);
-            const pleft = Math.floor(scrollEle.getBoundingClientRect().left); // 滚动块距视口距离
-            const ptop = Math.floor(scrollEle.getBoundingClientRect().top);
-            const cpLDis = activeTarget.offsetLeft - scrollEle.offsetLeft; // 当前元素距滚动块距离
-            const cpTDis = activeTarget.offsetTop - scrollEle.offsetTop;
-            return {
-                actW,
-                actH,
-                actPW,
-                actPH,
-                L,
-                T,
-                pleft,
-                ptop,
-                cpLDis,
-                cpTDis
-            };
+        refresh() {
+            const scroller = this.$refs.scroll;
+            const wrapper = this.$refs.scroll.parentElement;
+            this.scroller = scroller;
+            this.wrapper = wrapper;
+            // wrapper
+            this.wrapperWidth = wrapper.clientWidth;
+            this.wrapperHeight = wrapper.clientHeight;
+            // scroller
+            this.scrollerWidth = scroller.clientWidth;
+            this.scrollerHeight = scroller.clientHeight;
+            // maxScroll
+            this.maxScrollX	= this.wrapperWidth - this.scrollerWidth;
+            this.maxScrollY = this.wrapperHeight - this.scrollerHeight;
+
+            this.endTime = 0;
+            this.directionX = 0;
+            this.directionY = 0;
+            this.hasHorizontalScroll = this.maxScrollX < 0;
+            this.hasVerticalScroll = this.maxScrollY < 0;
+            this.translateTo(0, 0);
         },
-        calcPath(scrollX) {
-            let x = scrollX < 0 ? Math.max(Math.floor(90 + scrollX / 30), 92) : 100;
+        calcPath(x) {
+            x = x < 0 ? Math.max(Math.floor(100 + x / 60), 94) : 100;
             return `M100 0 C ${x} 5, ${x} 95, 100 100`;
         },
-        scrollTo(translateX = 0, translateY = 0, timeStamp = 0) {
-            this.trackStyle = {
-                transform: `translate(${translateX}px, ${translateY}px) translateZ(0px)`,
-                transitionDuration: `${timeStamp}ms`
+        translateTo(x = 0, y = 0, time = 0) {
+            x = Math.round(x);
+            y = Math.round(y);
+            this.scrollerStyle = {
+                transform: `translate(${x}px, ${y}px) translateZ(0px)`,
+                transitionDuration: `${time}ms`
             };
-            if (timeStamp) {
-                setTimeout(() => {
-                    this.trackStyle.transitionDuration = '0ms';
-                }, 600);
-            }
+            this.x = x;
+            this.y = y;
         },
-        onTouchstart(e) {
-            const point = e.touches ? e.touches[0] : e;
-            this.x = point.clientX;
-            this.y = point.clientY;
+        rAF(callback) {
+            this.timer = setTimeout(callback, 1000 / 60);
         },
-        onTouchmove(e) {
-            const pos = this.calcPos(e);
-            if ((this.scrollDirection === 'horizontal' && pos.absX <= pos.absY)
-                || (this.scrollDirection === 'vertical' && pos.absX >= pos.absY)) {
+        animateTo(destX, destY, duration) {
+            const that = this;
+            const startX = this.x;
+            const startY = this.y;
+            const startTime = this.getCurrentTime();
+            const destTime = startTime + duration;
+            // 缓动
+            function step() {
+                let now = that.getCurrentTime();
+                if (now >= destTime) {
+                    that.isAnimating = false;
+                    that.translateTo(destX, destY);
                     return;
                 }
-            if (this.scrollDirection === 'horizontal') {
-                // 水平
-                const X = pos.deltaX + this.oldScroll;
-                const scrollX = Math.round(X + (this.maxScrollDis - X) / 5);
-                // 手势判断
-                if (this.scrollX < scrollX) {
-                    this.directionX = -1; // 手势向左
-                }
-                else {
-                    this.directionX = 1; // 手势向右
-                }
-                this.scrollX = scrollX;
-                this.scrollTo(-scrollX, 0);
-                // 回弹阴影效果大小
-                if (this.moreShadow) {
-                    this.path = this.calcPath(scrollX);
+                now = (now - startTime) / duration;
+                const easing = Math.sqrt(1 - (--now * now));
+                const newX = (destX - startX) * easing + startX;
+                const newY = (destY - startY) * easing + startY;
+                that.translateTo(newX, newY);
+                if (that.isAnimating) {
+                    that.rAF(step);
                 }
             }
-            else if (this.scrollDirection === 'vertical') {
-                // 垂直
-                const Y = pos.deltaY + this.oldScroll;
-                const scrollY =  Math.round(Y + (this.maxScrollDis - Y) / 5);
-                // 手势判断
-                if (this.scrollY < scrollY) {
-                    this.directionY = -1; // 手势向上
+            this.isAnimating = true;
+            step();
+        },
+        scrollTo(x, y, time) {
+            if (!time) {
+                this.translateTo(x, y);
+            }
+            else {
+                this.animateTo(x, y, time);
+            }
+        },
+        getCurrentTime() {
+            // 获取当前时间
+            return Date.now() || new Date().getTime();
+        },
+        // calcPos(e) {
+        //     // point 触点
+        //     const point = e.changedTouches ? e.changedTouches[0] : e;
+        //     const deltaX = point.clientX - this.pointX; // 当前触点的clientX - 开始时的clientX = 触点档次增量x
+        //     const deltaY = point.clientY - this.pointY;    // 触点增量y
+        //     const absX = Math.abs(deltaX);
+        //     const absY = Math.abs(deltaY);
+        //     return {
+        //         deltaX,
+        //         deltaY,
+        //         absX,
+        //         absY
+        //     };
+        // },
+        onTouchstart(e) {
+            const point = e.touches ? e.touches[0] : e;
+            // 初始化数据
+            // this.moved = false;    // 是否移动的标志
+            this.distX = 0;        //
+            this.distY = 0;        //
+            this.directionX = 0;    // x方向移动数
+            this.directionY = 0;    // y方向移动数
+            // this.directionLocked = 0;    // 方向锁
+            // 开始时间
+            this.startTime = this.getCurrentTime();
+            // scroller开始位置x开始位置
+            this.startX = this.x || 0;
+            this.startY = this.y || 0;
+            // 触点
+            this.pointX = point.clientX;
+            this.pointY = point.clientY;
+            this.translateTo(this.x, this.y);
+            clearTimeout(this.timer);
+        },
+        onTouchmove(e) {
+            // const pos = this.calcPos(e);
+            // point 触点
+            const point = e.changedTouches ? e.changedTouches[0] : e;
+            let deltaX = point.clientX - this.pointX; // 当前触点的clientX - 开始时的clientX = 触点档次增量x
+            let deltaY = point.clientY - this.pointY;    // 触点增量y
+            // const absX = Math.abs(deltaX);
+            // const absY = Math.abs(deltaY);
+            const timestamp = this.getCurrentTime();
+            // 最近上一次的触点位置
+            this.pointX = point.clientX;
+            this.pointY = point.clientY;
+            // 触点移动的距离
+            this.distX += deltaX;
+            this.distY += deltaY;
+            const absDistX = Math.abs(this.distX);
+            const absDistY = Math.abs(this.distY);
+            if (this.scrollDirection === 'horizontal') {
+                if (absDistY > absDistX) {
+                    return;
                 }
-                else {
-                    this.directionY = 1; // 手势向下
+            }
+            if (this.scrollDirection === 'vertical') {
+                if (absDistY < absDistX) {
+                    return;
                 }
-                this.scrollY = scrollY;
-                this.scrollTo(0, -scrollY);
-                // 回弹阴影效果大小
-                // if (this.moreShadow) {
-                //     this.path = this.calcPath(scrollY);
-                // }
+            }
+            // 触点至少移动10px才会触发scroll的move 并且 移动大于300ms
+
+            if (timestamp - this.endTime > 300 && (absDistX < 10 && absDistY < 10)) {
+                return;
+            }
+            deltaX = this.hasHorizontalScroll ? deltaX : 0;
+            deltaY = this.hasVerticalScroll ? deltaY : 0;
+            // // this.x this.y 是最近上一次的scroller位置
+            let newX = this.x + deltaX;
+            let newY = this.y + deltaY;
+            if (newX > 0 || newX < this.maxScrollX) {
+                newX = this.x + deltaX / 3;
+            }
+            if (newY > 0 || newY < this.maxScrollY) {
+                newY = this.y + deltaY / 3;
+            }
+            this.directionX = deltaX > 0 ? 1 : deltaX < 0 ? -1 : 0;    // -1 手势向左   1 手势向右
+            this.directionY = deltaY > 0 ? 1 : deltaY < 0 ? -1 : 0; // -1 手势向上   1 手势向下
+            //
+            // this.moved = true;
+            if (this.scrollDirection === 'horizontal') {
+                newY = 0;
+            }
+            else {
+                newX = 0;
+            }
+            this.translateTo(newX, newY);
+            if (timestamp - this.startTime > 300) {
+                // 300ms更新一次
+                this.startTime = timestamp;
+                this.startX = this.x;
+                this.startY = this.y;
+            }
+            // 回弹阴影效果大小
+            if (this.moreShadow) {
+                this.path = this.calcPath(newX);
             }
             // 滚动时回调
             if (typeof this.moveCallback === 'function') {
                 this.moveCallback();
             }
-            this.startTime = Date.now();
         },
         onTouchend(e) {
             this.path = this.calcPath(0);
-            const pos = this.calcPos(e);
-            if ((this.scrollDirection === 'horizontal' && pos.absX <= pos.absY)
-                || (this.scrollDirection === 'vertical' && pos.absX >= pos.absY)) {
+            this.endTime = this.getCurrentTime();
+            const duration = this.endTime - this.startTime;
+            const absDistX = Math.abs(this.distX);
+            const absDistY = Math.abs(this.distY);
+            // 触点至少移动10px才会触发scroll的move 并且 移动大于300ms
+            // if (duration < 300 && (absDistX < 10 && absDistY < 10)) {
+            //     return;
+            // }
+            if (this.scrollDirection === 'horizontal') {
+                if (absDistY > absDistX) {
                     return;
                 }
-            if (this.scrollDirection === 'horizontal') {
-                const X = pos.deltaX + this.oldScroll;
-                let scrollX =  Math.round(X + (this.maxScrollDis - X) / 5);
-                if (scrollX > 0) {
-                    scrollX = scrollX > this.maxScrollDis ? this.maxScrollDis : scrollX;
-                }
-                else {
-                    scrollX = 0;
-                }
-                this.oldScroll = scrollX;
-                this.scrollTo(-scrollX, 0, 600);
-                // 滚动完成回调
-                if (typeof this.afterRelease === 'function'
-                    && !~this.directionX
-                    && (scrollX === this.maxScrollDis || (X > 0 && this.maxScrollDis < 0))) {
+            }
+            let newX = Math.round(this.x);
+            let newY = Math.round(this.y);
+            // let distanceX = Math.abs(newX - this.startX);    // 单次移动过程的x轴移动距离
+            // let distanceY = Math.abs(newY - this.startY);
+            const momentumX = this.hasHorizontalScroll
+            ? this.momentum(this.x, this.startX, duration, this.maxScrollX, this.wrapperWidth)
+            : {destination: newX, duration: 0};
+            const momentumY = this.hasVerticalScroll
+            ? this.momentum(this.y, this.startY, duration, this.maxScrollY, this.wrapperHeight)
+            : {destination: newY, duration: 0};
+            newX = momentumX.destination;
+            newY = momentumY.destination;
+            const time = Math.max(momentumX.duration, momentumY.duration);
+            if (newX !== this.x || newY !== this.y) {
+                this.scrollTo(newX, newY, time);
+            }
+            // 滚动完成时尾部回调
+            if (typeof this.afterRelease === 'function') {
+                if ((newX <= this.maxScrollX && !~this.directionX) || (newY <= this.maxScrollY && !~this.directionY)) {
                     this.afterRelease();
-                }
-                else if (typeof this.beforeRelease === 'function'
-                        && this.directionX === 1
-                        && X < -50) {
-                    this.beforeRelease();
                 }
             }
-            else if (this.scrollDirection === 'vertical') {
-                // 垂直
-                const Y = pos.deltaY + this.oldScroll;
-                let scrollY = Math.round(Y + (this.maxScrollDis - Y) / 5);
-                if (scrollY > 0) {
-                    scrollY = scrollY > this.maxScrollDis ? this.maxScrollDis : scrollY;
-                }
-                else {
-                    scrollY = 0;
-                }
-                this.oldScroll = scrollY;
-                this.scrollTo(-scrollY, 0, 600);
-                // 滚动完成回调
-                if (typeof this.afterRelease === 'function'
-                    && !~this.directionY
-                    && (scrollY === this.maxScrollDis || (Y > 0 && this.maxScrollDis < 0))) {
-                    this.afterRelease();
-                }
-                else if (typeof this.beforeRelease === 'function'
-                        && this.directionY === 1
-                        && Y < -50) {
+            // 滚动完成时头部回调
+            if (typeof this.beforeRelease === 'function') {
+                if ((newX >= 0 && this.directionX === 1) || (newY >= 0 && this.directionY === 1)) {
                     this.beforeRelease();
                 }
             }
@@ -289,7 +358,7 @@ export default {
                 <div
                     class={scrollClass.inner}
                     ref="scroll"
-                    style={this.trackStyle}
+                    style={this.scrollerStyle}
                     on-touchstart={this.onTouchstart}
                     on-touchmove={this.onTouchmove}
                     on-touchend={this.onTouchend}
@@ -310,17 +379,8 @@ export default {
         );
     },
     mounted() {
-        const scroller = this.$refs.scroll;
-        const wrapper = this.$refs.scroll.parentElement;
-        if (scroller) {
-            if (this.scrollDirection === 'vertical') {
-                // 垂直滚动
-                this.maxScrollDis = scroller.clientHeight - wrapper.clientHeight;
-            }
-            else {
-                // 水平滚动
-                this.maxScrollDis = scroller.clientWidth - wrapper.clientWidth;
-            }
-        }
+        this.$nextTick(() => {
+            this.refresh();
+        });
     }
 };
