@@ -69,26 +69,34 @@ export default {
     },
     watch: {
         activeEvent() {
-            const {activeEvent, wrapperWidth, maxScrollX, activeTargetPos} = this;
+            const {activeEvent, wrapperWidth, wrapperHeight, maxScrollX, maxScrollY, activeTargetPos} = this;
             const activeTarget = activeEvent.target;
             const actPW = Math.min(wrapperWidth, document.body.clientWidth); // 滚动块的显示区域
             const actW = activeTarget.clientWidth; // 当前元素内容
+            const actPH = Math.min(wrapperHeight, document.body.clientHeight); // 滚动块的显示区域
+            const actH = activeTarget.clientHeight; // 当前元素内容
             let newX = activeTarget.offsetLeft - actPW / 2;
+            let newY = activeTarget.offsetTop - actPH / 2;
             switch (activeTargetPos) {
                 case 'left':
                     newX = activeTarget.offsetLeft - actPW / 5;
+                    newY = activeTarget.offsetTop - actPH / 5;
                     break;
                 case 'right':
                     newX = activeTarget.offsetLeft - actPW * 2 / 3;
+                    newY = activeTarget.offsetTop - actPH * 2 / 3;
                     break;
                 case 'center':
                     newX = activeTarget.offsetLeft - actPW / 2;
+                    newY = activeTarget.offsetTop - actPH / 2;
                     break;
                 default:
                     newX = activeTarget.offsetLeft - actPW / 2;
+                    newY = activeTarget.offsetTop - actPH / 2;
             }
             newX = newX < 0 ? 0 : (newX > actW - maxScrollX ? -this.x : newX);
-            this.translateTo(-newX, 0, 400);
+            newY = newY < 0 ? 0 : (newY > actH - maxScrollY ? -this.y : newY);
+            this.translateTo(-newX, -newY, 400);
         }
     },
     methods: {
