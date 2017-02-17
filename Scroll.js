@@ -56,6 +56,16 @@ export default {
             type: Function,
             default: i => 0
         },
+        beyondCallback: {
+            // 滚动时超出更多时回调
+            type: Function,
+            default: i => 0
+        },
+        cancelBeyondCallback: {
+            // 滚动时取消超出更多时回调
+            type: Function,
+            default: i => 0
+        },
         afterRelease: {
             // 列表尾部滚动完成回调
             type: Function,
@@ -111,6 +121,7 @@ export default {
             let duration = speed / deceleration;
             if (destination < lowerMargin) {
                 destination = wrapperSize ? lowerMargin - (wrapperSize / 2.5 * (speed / 8)) : lowerMargin;
+                destination = Math.max(destination, lowerMargin);
                 distance = Math.abs(destination - current);
                 duration = distance / speed;
             }
@@ -187,7 +198,7 @@ export default {
                 const easing = Math.sqrt(1 - (--now * now));
                 const newX = (destX - startX) * easing + startX;
                 const newY = (destY - startY) * easing + startY;
-                that.translateTo(newX, newY);
+                that.translateTo(newX, newY, duration);
                 if (that.isAnimating) {
                     that.rAF(step);
                 }
@@ -310,6 +321,19 @@ export default {
             if (typeof this.moveCallback === 'function') {
                 this.moveCallback();
             }
+            // 滚动超出时回调
+            if (typeof this.beyondCallback === 'function') {
+                const beyondStatus = this.scrollDirection === 'horizontal'
+                ? this.x <= this.maxScrollX : this.y <= this.maxScrollY;
+                beyondStatus && this.beyondCallback();
+            }
+            // 滚动超出取消时回调
+            if (typeof this.cancelBeyondCallback === 'function') {
+                const cancelBeyondStatus = this.scrollDirection === 'horizontal'
+                ? (this.x > this.maxScrollX || this.directionX === 1)
+                : (this.y > this.maxScrollY || this.directionY === 1);
+                cancelBeyondStatus && this.cancelBeyondCallback();
+            }
         },
         onTouchend(e) {
             this.path = this.calcPath(0);
@@ -349,13 +373,14 @@ export default {
             }
             // 滚动完成时尾部回调
             if (typeof this.afterRelease === 'function') {
-                if ((newX <= this.maxScrollX && !~this.directionX) || (newY <= this.maxScrollY && !~this.directionY)) {
+                if ((this.x <= this.maxScrollX && !~this.directionX)
+                || (this.y <= this.maxScrollY && !~this.directionY)) {
                     this.afterRelease();
                 }
             }
             // 滚动完成时头部回调
             if (typeof this.beforeRelease === 'function') {
-                if ((newX >= 0 && this.directionX === 1) || (newY >= 0 && this.directionY === 1)) {
+                if ((this.x >= 0 && this.directionX === 1) || (this.y >= 0 && this.directionY === 1)) {
                     this.beforeRelease();
                 }
             }

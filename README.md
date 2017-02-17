@@ -5,6 +5,8 @@
         3. 滚动至尾部回弹阴影效果
         4. 滚动时回调
         5. 滚动完成回调 （支持列表头部和列表尾部滚动完成的回调）
+        6. 滚动超出边界时回调
+        7. 滚动回归边界内部时回调
 
 # 使用方法 (xxx.vue)
     <template>
@@ -81,8 +83,18 @@
                     type: Function,
                     default: i => 0
                 }
+    7. 滚动时超出更多时回调
+            beyondCallback: {
+                type: Function,
+                default: i => 0
+            }
+    8. 滚动时取消超出更多时回调
+            cancelBeyondCallback: {
+                type: Function,
+                default: i => 0
+            }
 
-    7. 滚动至尾部是否展示阴影效果（仅对水平滑动有效）
+    9. 滚动至尾部是否展示阴影效果（仅对水平滑动有效）
                 moreShadow: {
                     type: Boolean,
                     default: false
