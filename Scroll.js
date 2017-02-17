@@ -78,11 +78,11 @@ export default {
             let newX = activeTarget.offsetLeft - actPW / 2;
             let newY = activeTarget.offsetTop - actPH / 2;
             switch (activeTargetPos) {
-                case 'left':
+                case 'left':case 'top':
                     newX = activeTarget.offsetLeft - actPW / 5;
                     newY = activeTarget.offsetTop - actPH / 5;
                     break;
-                case 'right':
+                case 'right':case 'bottom':
                     newX = activeTarget.offsetLeft - actPW * 2 / 3;
                     newY = activeTarget.offsetTop - actPH * 2 / 3;
                     break;
@@ -96,7 +96,7 @@ export default {
             }
             newX = newX < 0 ? 0 : (newX > actW - maxScrollX ? -this.x : newX);
             newY = newY < 0 ? 0 : (newY > actH - maxScrollY ? -this.y : newY);
-            this.translateTo(-newX, -newY, 400);
+            this.translateTo(-newX, -newY, 300);
         }
     },
     methods: {
@@ -147,6 +147,10 @@ export default {
             this.hasHorizontalScroll = this.maxScrollX < 0;
             this.hasVerticalScroll = this.maxScrollY < 0;
             this.translateTo(0, 0);
+            // reset moreShadow
+            if (this.scrollDirection === 'vertical') {
+                this.moreShadow = false;
+            }
         },
         calcPath(x) {
             x = x < 0 ? Math.max(Math.floor(100 + x / 60), 94) : 100;
@@ -260,6 +264,7 @@ export default {
                 }
             }
             if (this.scrollDirection === 'vertical') {
+                e.preventDefault();
                 if (absDistY < absDistX) {
                     return;
                 }
@@ -298,7 +303,7 @@ export default {
                 this.startY = this.y;
             }
             // 回弹阴影效果大小
-            if (this.moreShadow) {
+            if (this.moreShadow && this.scrollDirection === 'horizontal') {
                 this.path = this.calcPath(newX);
             }
             // 滚动时回调
@@ -317,7 +322,12 @@ export default {
             //     return;
             // }
             if (this.scrollDirection === 'horizontal') {
-                if (absDistY > absDistX) {
+                if (absDistY >= absDistX) {
+                    return;
+                }
+            }
+            if (this.scrollDirection === 'vertical') {
+                if (absDistY <= absDistX) {
                     return;
                 }
             }
