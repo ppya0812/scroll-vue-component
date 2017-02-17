@@ -164,7 +164,7 @@ export default {
             }
         },
         calcPath(x) {
-            x = x < 0 ? Math.max(Math.floor(100 + x / 60), 94) : 100;
+            x = x < 0 ? Math.max(Math.floor(100 + (x - this.maxScrollX) / 5), 94) : 100;
             return `M100 0 C ${x} 5, ${x} 95, 100 100`;
         },
         translateTo(x = 0, y = 0, time = 0) {
@@ -330,8 +330,8 @@ export default {
             // 滚动超出取消时回调
             if (typeof this.cancelBeyondCallback === 'function') {
                 const cancelBeyondStatus = this.scrollDirection === 'horizontal'
-                ? (this.x > this.maxScrollX || this.directionX === 1)
-                : (this.y > this.maxScrollY || this.directionY === 1);
+                ? (newX > this.maxScrollX || this.directionX === 1)
+                : (newY > this.maxScrollY || this.directionY === 1);
                 cancelBeyondStatus && this.cancelBeyondCallback();
             }
         },
@@ -373,14 +373,13 @@ export default {
             }
             // 滚动完成时尾部回调
             if (typeof this.afterRelease === 'function') {
-                if ((this.x <= this.maxScrollX && !~this.directionX)
-                || (this.y <= this.maxScrollY && !~this.directionY)) {
+                if ((newX <= this.maxScrollX && !~this.directionX) || (newY <= this.maxScrollY && !~this.directionY)) {
                     this.afterRelease();
                 }
             }
             // 滚动完成时头部回调
             if (typeof this.beforeRelease === 'function') {
-                if ((this.x >= 0 && this.directionX === 1) || (this.y >= 0 && this.directionY === 1)) {
+                if ((newX >= 0 && this.directionX === 1) || (newY >= 0 && this.directionY === 1)) {
                     this.beforeRelease();
                 }
             }
