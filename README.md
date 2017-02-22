@@ -1,19 +1,20 @@
-# 水平垂直滚动公用组件 （for vue)
+# 移动端水平垂直滚动公用组件 （for vue)
 
 ```
 * 支持功能：
-    1\. 水平、垂直滚动（默认是水平滚动horizontal）
-    2\. 滚动元素定位到某一项（居左，居中，居右，居上、居下）
-    3\. 滚动至尾部回弹阴影效果
-    4\. 滚动时回调
-    5\. 滚动完成回调 （支持列表头部和列表尾部滚动完成的回调）
-    6\. 滚动超出边界时回调
-    7\. 滚动回归边界内部时回调
+    1. 水平、垂直滚动（默认是水平滚动horizontal）
+    2. 滚动元素定位到某一项（居左，居中，居右，居上、居下）
+    3. 滚动至尾部回弹阴影效果
+    4. 滚动时回调
+    5. 滚动完成回调 （支持列表头部和列表尾部滚动完成的回调）
+    6. 滚动超出边界时回调
+    7. 滚动回归边界内部时回调
 ```
 
-# 使用示例 (xxx.vue)
+## 使用示例
 
 ```
+// xxx.vue
 <template>
     <div class="XXX">
         <scroll :activeEvent="activeEvent" :moreShadow="moreShadow" :afterRelease="afterRelease" :beforeRelease="beforeRelease">
