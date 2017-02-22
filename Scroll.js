@@ -19,10 +19,18 @@ export default {
             directionX: 0,
             directionY: 0,
             endTime: 0,
-            ircular: {
+            circular: {
                 style: 'cubic-bezier(0.1, 0.57, 0.1, 1)',	// Not properly "circular" but this looks better, it should be (0.075, 0.82, 0.165, 1)
-                fn: function (k) {
-                    return Math.sqrt(1 - (--k * k));
+                easeOut: function (now, startTime, duration, start, dest) {
+                    // 处理缓动
+                    now = (now - startTime) / duration - 1;
+                    const easing = now * now * now + 1;
+                    return (dest - start) * easing + start;
+                },
+                ease: function (now, startTime, duration, start, dest) {
+                    now = (now - startTime) / duration;
+                    const easing = Math.sqrt(1 - (--now * now));
+                    return (dest - start) * easing + start;
                 }
             }
             // quadratic: {
@@ -111,6 +119,7 @@ export default {
     },
     methods: {
         momentum(current, start, time, lowerMargin, wrapperSize, deceleration) {
+            // 距离 & 运动时间处理
             let distance = current - start;
             const speed = Math.abs(distance) / time;
             // 减速变量
@@ -132,9 +141,10 @@ export default {
                 distance = Math.abs(current) + destination;
                 duration = distance / speed;
             }
+            // console.log(destination, duration, speed);
             return {
                 destination: Math.floor(destination),
-                duration: Math.min(Math.round(duration), 300)
+                duration: Math.min(Math.round(duration), 400)
             };
         },
         refresh() {
@@ -164,6 +174,7 @@ export default {
             }
         },
         calcPath(x) {
+            // svg阴影处理
             x = x < 0 ? Math.max(Math.floor(100 + (x - this.maxScrollX) / 5), 94) : 100;
             return `M100 0 C ${x} 5, ${x} 95, 100 100`;
         },
@@ -186,7 +197,7 @@ export default {
             const startY = this.y;
             const startTime = this.getCurrentTime();
             const destTime = startTime + duration;
-            // 缓动
+            // 处理缓动的step函数
             function step() {
                 let now = that.getCurrentTime();
                 if (now >= destTime) {
@@ -194,10 +205,11 @@ export default {
                     that.translateTo(destX, destY);
                     return;
                 }
-                now = (now - startTime) / duration;
-                const easing = Math.sqrt(1 - (--now * now));
-                const newX = (destX - startX) * easing + startX;
-                const newY = (destY - startY) * easing + startY;
+                // const easing = now * now * now + 1;
+                // const easing = Math.sqrt(1 - (--now * now));
+                // const easing = now * (2 - now);
+                const newX = that.circular.easeOut(now, startTime, duration, startX, destX);
+                const newY = that.circular.easeOut(now, startTime, duration, startY, destY);
                 that.translateTo(newX, newY, duration);
                 if (that.isAnimating) {
                     that.rAF(step);
@@ -256,7 +268,7 @@ export default {
             // const pos = this.calcPos(e);
             // point 触点
             const point = e.changedTouches ? e.changedTouches[0] : e;
-            let deltaX = point.clientX - this.pointX; // 当前触点的clientX - 开始时的clientX = 触点档次增量x
+            let deltaX = point.clientX - this.pointX; // 当前触点的clientX - 开始时的clientX = 触点当次增量x
             let deltaY = point.clientY - this.pointY;    // 触点增量y
             // const absX = Math.abs(deltaX);
             // const absY = Math.abs(deltaY);
@@ -281,7 +293,6 @@ export default {
                 }
             }
             // 触点至少移动10px才会触发scroll的move 并且 移动大于300ms
-
             if (timestamp - this.endTime > 300 && (absDistX < 10 && absDistY < 10)) {
                 return;
             }
@@ -341,10 +352,6 @@ export default {
             const duration = this.endTime - this.startTime;
             const absDistX = Math.abs(this.distX);
             const absDistY = Math.abs(this.distY);
-            // 触点至少移动10px才会触发scroll的move 并且 移动大于300ms
-            // if (duration < 300 && (absDistX < 10 && absDistY < 10)) {
-            //     return;
-            // }
             if (this.scrollDirection === 'horizontal') {
                 if (absDistY >= absDistX) {
                     return;
@@ -357,8 +364,6 @@ export default {
             }
             let newX = Math.round(this.x);
             let newY = Math.round(this.y);
-            // let distanceX = Math.abs(newX - this.startX);    // 单次移动过程的x轴移动距离
-            // let distanceY = Math.abs(newY - this.startY);
             const momentumX = this.hasHorizontalScroll
             ? this.momentum(this.x, this.startX, duration, this.maxScrollX, this.wrapperWidth)
             : {destination: newX, duration: 0};
@@ -373,13 +378,14 @@ export default {
             }
             // 滚动完成时尾部回调
             if (typeof this.afterRelease === 'function') {
-                if ((newX <= this.maxScrollX && !~this.directionX) || (newY <= this.maxScrollY && !~this.directionY)) {
+                if ((this.x <= this.maxScrollX && !~this.directionX)
+                    || (this.y <= this.maxScrollY && !~this.directionY)) {
                     this.afterRelease();
                 }
             }
             // 滚动完成时头部回调
             if (typeof this.beforeRelease === 'function') {
-                if ((newX >= 0 && this.directionX === 1) || (newY >= 0 && this.directionY === 1)) {
+                if ((this.x >= 0 && this.directionX === 1) || (this.y >= 0 && this.directionY === 1)) {
                     this.beforeRelease();
                 }
             }
