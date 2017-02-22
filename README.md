@@ -10,6 +10,11 @@
     6. 滚动超出边界时回调
     7. 滚动回归边界内部时回调
 ```
+## install
+
+[![NPM](https://nodei.co/npm/scroll-vue-component.png)](https://nodei.co/npm/scroll-vue-component/)
+
+github: <https://github.com/ppya0812/scroll-vue-component>
 
 ## 使用示例
 
