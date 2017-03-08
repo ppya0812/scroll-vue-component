@@ -18,27 +18,7 @@ export default {
             y: 0,
             directionX: 0,
             directionY: 0,
-            endTime: 0,
-            circular: {
-                style: 'cubic-bezier(0.1, 0.57, 0.1, 1)',	// Not properly "circular" but this looks better, it should be (0.075, 0.82, 0.165, 1)
-                easeOut: function (now, startTime, duration, start, dest) {
-                    // 处理缓动
-                    now = (now - startTime) / duration - 1;
-                    const easing = now * now * now + 1;
-                    return (dest - start) * easing + start;
-                },
-                ease: function (now, startTime, duration, start, dest) {
-                    now = (now - startTime) / duration;
-                    const easing = Math.sqrt(1 - (--now * now));
-                    return (dest - start) * easing + start;
-                }
-            }
-            // quadratic: {
-            //     style: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)',
-            //     fn: function (k) {
-            //         return k * (2 - k);
-            //     }
-            // }
+            endTime: 0
         };
     },
     props: {
@@ -96,24 +76,24 @@ export default {
             let newX = activeTarget.offsetLeft - actPW / 2;
             let newY = activeTarget.offsetTop - actPH / 2;
             switch (activeTargetPos) {
-                case 'left':case 'top':
-                    newX = activeTarget.offsetLeft - actPW / 5;
-                    newY = activeTarget.offsetTop - actPH / 5;
-                    break;
-                case 'right':case 'bottom':
-                    newX = activeTarget.offsetLeft - actPW * 2 / 3;
-                    newY = activeTarget.offsetTop - actPH * 2 / 3;
-                    break;
-                case 'center':
-                    newX = activeTarget.offsetLeft - actPW / 2;
-                    newY = activeTarget.offsetTop - actPH / 2;
-                    break;
-                default:
-                    newX = activeTarget.offsetLeft - actPW / 2;
-                    newY = activeTarget.offsetTop - actPH / 2;
+            case 'left':case 'top':
+                newX = activeTarget.offsetLeft - actPW / 5;
+                newY = activeTarget.offsetTop - actPH / 5;
+                break;
+            case 'right':case 'bottom':
+                newX = activeTarget.offsetLeft - actPW * 2 / 3;
+                newY = activeTarget.offsetTop - actPH * 2 / 3;
+                break;
+            case 'center':
+                newX = activeTarget.offsetLeft - actPW / 2;
+                newY = activeTarget.offsetTop - actPH / 2;
+                break;
+            default:
+                newX = activeTarget.offsetLeft - actPW / 2;
+                newY = activeTarget.offsetTop - actPH / 2;
             }
-            newX = newX < 0 ? 0 : (newX > actW - maxScrollX ? -this.x : newX);
-            newY = newY < 0 ? 0 : (newY > actH - maxScrollY ? -this.y : newY);
+            newX = newX <= 0 ? 0 : (newX > actW - maxScrollX ? -this.x : newX);
+            newY = newY <= 0 ? 0 : (newY > actH - maxScrollY ? -this.y : newY);
             this.translateTo(-newX, -newY, 300);
         }
     },
@@ -130,21 +110,20 @@ export default {
             let duration = speed / deceleration;
             if (destination < lowerMargin) {
                 destination = wrapperSize ? lowerMargin - (wrapperSize / 2.5 * (speed / 8)) : lowerMargin;
-                destination = Math.max(destination, lowerMargin);
+                // destination = Math.max(destination, lowerMargin);
                 distance = Math.abs(destination - current);
                 duration = distance / speed;
-            }
-            else if (destination > 0) {
+            } else if (destination > 0) {
                 // 向右
-                // destination = wrapperSize ? wrapperSize / 2.5 * (speed / 8) : 0;
-                destination = 0;
+                destination = wrapperSize ? wrapperSize / 2.5 * (speed / 8) : 0;
+                // destination = 0;
                 distance = Math.abs(current) + destination;
                 duration = distance / speed;
             }
             // console.log(destination, duration, speed);
             return {
-                destination: Math.floor(destination),
-                duration: Math.min(Math.round(duration), 400)
+                destination: Math.round(destination),
+                duration: Math.min(Math.round(duration) / 2.5, 600)
             };
         },
         refresh() {
@@ -159,8 +138,11 @@ export default {
             this.scrollerWidth = scroller.clientWidth;
             this.scrollerHeight = scroller.clientHeight;
             // maxScroll
-            this.maxScrollX	= this.wrapperWidth - this.scrollerWidth;
+            this.maxScrollX = this.wrapperWidth - this.scrollerWidth;
             this.maxScrollY = this.wrapperHeight - this.scrollerHeight;
+
+            this.maxScrollX = this.scrollDirection === 'horizontal' ? this.maxScrollX : 0;
+            this.maxScrollY = this.scrollDirection === 'horizontal' ? 0 : this.maxScrollY;
 
             this.endTime = 0;
             this.directionX = 0;
@@ -185,31 +167,48 @@ export default {
                 transform: `translate(${x}px, ${y}px) translateZ(0px)`,
                 transitionDuration: `${time}ms`
             };
+            if (this.transitionTimingFunction) {
+                this.scrollerStyle.transitionTimingFunction = this.transitionTimingFunction;
+            }
             this.x = x;
             this.y = y;
         },
         rAF(callback) {
             this.timer = setTimeout(callback, 1000 / 60);
         },
-        animateTo(destX, destY, duration) {
+        animateTo(destX, destY, duration, easingFn) {
             const that = this;
             const startX = this.x;
             const startY = this.y;
             const startTime = this.getCurrentTime();
             const destTime = startTime + duration;
+
             // 处理缓动的step函数
             function step() {
                 let now = that.getCurrentTime();
                 if (now >= destTime) {
                     that.isAnimating = false;
+                    if (destX > 0 || destX < that.maxScrollX || destY > 0 || destY < that.maxScrollY) {
+                        // 碰壁回弹效果处理
+                        const backNewX = destX > 0 ? 0 : (destX < that.maxScrollX ? that.maxScrollX : destX);
+                        const backNewY = destX > 0 ? 0 : (destY < that.maxScrollY ? that.maxScrollY : destY);
+                        that.timer = setTimeout(() => {
+                            that.translateTo(backNewX, backNewY, 100);
+                        }, 1000 / 60)
+                    }
                     that.translateTo(destX, destY);
                     return;
                 }
-                // const easing = now * now * now + 1;
-                // const easing = Math.sqrt(1 - (--now * now));
-                // const easing = now * (2 - now);
-                const newX = that.circular.easeOut(now, startTime, duration, startX, destX);
-                const newY = that.circular.easeOut(now, startTime, duration, startY, destY);
+                now = (now - startTime) / duration;
+                const easing = easingFn(now);
+                const newX = (destX - startX) * easing + startX;
+                const newY = (destY - startY) * easing + startY;
+                // if (newX > 0 || newX < that.maxScrollX) {
+                //     const backNewX = newX > 0 ? 0 : (newX < that.maxScrollX ? that.maxScrollX : destX);
+                //     that.timer = setTimeout(() => {
+                //         that.translateTo(backNewX, that.maxScrollY, 100);
+                //     }, 1000 / 60)
+                // }
                 that.translateTo(newX, newY, duration);
                 if (that.isAnimating) {
                     that.rAF(step);
@@ -218,12 +217,15 @@ export default {
             this.isAnimating = true;
             step();
         },
-        scrollTo(x, y, time) {
+        scrollTo(x, y, time, easing) {
+            easing = easing || this.EASEING.circular;
+            if (easing.style) {
+                this.transitionTimingFunction = easing.style;
+            }
             if (!time) {
                 this.translateTo(x, y);
-            }
-            else {
-                this.animateTo(x, y, time);
+            } else {
+                this.animateTo(x, y, time, easing.fn);
             }
         },
         getCurrentTime() {
@@ -313,8 +315,7 @@ export default {
             // this.moved = true;
             if (this.scrollDirection === 'horizontal') {
                 newY = 0;
-            }
-            else {
+            } else {
                 newX = 0;
             }
             this.translateTo(newX, newY);
@@ -349,6 +350,7 @@ export default {
         onTouchend(e) {
             this.path = this.calcPath(0);
             this.endTime = this.getCurrentTime();
+            let easing = '';
             const duration = this.endTime - this.startTime;
             const absDistX = Math.abs(this.distX);
             const absDistY = Math.abs(this.distY);
@@ -370,16 +372,22 @@ export default {
             const momentumY = this.hasVerticalScroll
             ? this.momentum(this.y, this.startY, duration, this.maxScrollY, this.wrapperHeight)
             : {destination: newY, duration: 0};
+
             newX = momentumX.destination;
             newY = momentumY.destination;
             const time = Math.max(momentumX.duration, momentumY.duration);
+
             if (newX !== this.x || newY !== this.y) {
-                this.scrollTo(newX, newY, time);
+                if (newX > 0 || newX < this.maxScrollX || newY > 0 || newY < this.maxScrollY) {
+                    // 处理碰壁回弹
+                    easing = this.EASEING.quadratic;
+                }
+                this.scrollTo(newX, newY, time, easing);
             }
             // 滚动完成时尾部回调
             if (typeof this.afterRelease === 'function') {
-                if ((this.x <= this.maxScrollX && !~this.directionX)
-                    || (this.y <= this.maxScrollY && !~this.directionY)) {
+                if ((this.x <= this.maxScrollX && !~this.directionX) ||
+                    (this.y <= this.maxScrollY && !~this.directionY)) {
                     this.afterRelease();
                 }
             }
@@ -430,5 +438,51 @@ export default {
         this.$nextTick(() => {
             this.refresh();
         });
+        this.EASEING = {
+            quadratic: {
+                style: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+                fn: function (k) {
+                    return k * (2 - k);
+                }
+            },
+            circular: {
+                style: 'cubic-bezier(0.1, 0.57, 0.1, 1)', // Not properly "circular" but this looks better, it should be (0.075, 0.82, 0.165, 1)
+                fn: function (k) {
+                    return Math.sqrt(1 - (--k * k));
+                }
+            },
+            back: {
+                style: 'cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+                fn: function (k) {
+                    var b = 4;
+                    return (k = k - 1) * k * ((b + 1) * k + b) + 1;
+                }
+            },
+            bounce: {
+                style: '',
+                fn: function (k) {
+                    if ((k /= 1) < (1 / 2.75)) {
+                        return 7.5625 * k * k;
+                    } else if (k < (2 / 2.75)) {
+                        return 7.5625 * (k -= (1.5 / 2.75)) * k + 0.75;
+                    } else if (k < (2.5 / 2.75)) {
+                        return 7.5625 * (k -= (2.25 / 2.75)) * k + 0.9375;
+                    } else {
+                        return 7.5625 * (k -= (2.625 / 2.75)) * k + 0.984375;
+                    }
+                }
+            },
+            elastic: {
+                style: '',
+                fn: function (k) {
+                    const f = 0.22;
+                    const e = 0.4;
+
+                    if (k === 0) { return 0; }
+                    if (k === 1) { return 1; }
+                    return (e * Math.pow(2, -10 * k) * Math.sin((k - f / 4) * (2 * Math.PI) / f) + 1);
+                }
+            }
+        }
     }
 };
