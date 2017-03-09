@@ -213,7 +213,7 @@ export default {
             step();
         },
         scrollTo(x, y, time = 0, easing) {
-            easing = easing || this.EASEING.circular;
+            easing = easing || this.EASEING.easeOut;
             if (easing.style) {
                 this.transitionTimingFunction = easing.style;
             }
@@ -436,11 +436,10 @@ export default {
         });
         this.EASEING = {
             easeOut: {
-                style: 'cubic-bezier(0.1, 0.57, 0.1, 1)',
+                style: 'cubic-bezier(0.075, 0.82, 0.165, 1)',
                 fn: function (k) {
-                    // console.log(k, Math.pow(k - 2, 3) + 2);
-                    return Math.pow(k - 1, 3) + 1;
-                    // return k;
+                    // return Math.pow(k - 1, 3) + 1;
+                    return Math.sqrt(1 - (--k * k));
                 }
             },
             easeInOut: {
