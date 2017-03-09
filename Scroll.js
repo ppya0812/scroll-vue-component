@@ -94,6 +94,7 @@ export default {
             }
             newX = newX <= 0 ? 0 : (newX > actW - maxScrollX ? -this.x : newX);
             newY = newY <= 0 ? 0 : (newY > actH - maxScrollY ? -this.y : newY);
+            this.transitionTimingFunction = this.EASEING.circular.style;
             this.translateTo(-newX, -newY, 300);
         }
     },
@@ -105,8 +106,8 @@ export default {
             // 减速变量
             deceleration = deceleration === undefined ? 0.0006 : deceleration;
             // 减速路程
-            let destination = current + (speed * speed) / (2 * deceleration) * (distance < 0 ? -1 : 1);
-            // 持续时间
+            let destination = current + (speed * speed) / (2.5 * deceleration) * (distance < 0 ? -1 : 1);
+            // 持续时间 速度消减至0所需时间
             let duration = speed / deceleration;
             if (destination < lowerMargin) {
                 destination = wrapperSize ? lowerMargin - (wrapperSize / 2.5 * (speed / 8)) : lowerMargin;
@@ -120,10 +121,11 @@ export default {
                 distance = Math.abs(current) + destination;
                 duration = distance / speed;
             }
-            // console.log(destination, duration, speed);
+            // 获得最终移动距离 & 持续时间
             return {
                 destination: Math.round(destination),
-                duration: Math.min(Math.round(duration) / 2.5, 600)
+                duration: Math.min(Math.round(duration) / 2, 600)
+                // duration: duration
             };
         },
         refresh() {
@@ -182,33 +184,26 @@ export default {
             const startY = this.y;
             const startTime = this.getCurrentTime();
             const destTime = startTime + duration;
-
             // 处理缓动的step函数
             function step() {
                 let now = that.getCurrentTime();
-                if (now >= destTime) {
+                if (now >= destTime - 10) {
                     that.isAnimating = false;
+                    that.scrollTo(destX, destY);
                     if (destX > 0 || destX < that.maxScrollX || destY > 0 || destY < that.maxScrollY) {
                         // 碰壁回弹效果处理
                         const backNewX = destX > 0 ? 0 : (destX < that.maxScrollX ? that.maxScrollX : destX);
                         const backNewY = destX > 0 ? 0 : (destY < that.maxScrollY ? that.maxScrollY : destY);
-                        that.timer = setTimeout(() => {
-                            that.translateTo(backNewX, backNewY, 100);
-                        }, 1000 / 60)
+                        that.scrollTo(backNewX, backNewY, 100, that.EASEING.back);
                     }
-                    that.translateTo(destX, destY);
                     return;
                 }
                 now = (now - startTime) / duration;
                 const easing = easingFn(now);
+                // const easing = that.EASEING.circular.fn(now);
+                that.easing = easing;
                 const newX = (destX - startX) * easing + startX;
                 const newY = (destY - startY) * easing + startY;
-                // if (newX > 0 || newX < that.maxScrollX) {
-                //     const backNewX = newX > 0 ? 0 : (newX < that.maxScrollX ? that.maxScrollX : destX);
-                //     that.timer = setTimeout(() => {
-                //         that.translateTo(backNewX, that.maxScrollY, 100);
-                //     }, 1000 / 60)
-                // }
                 that.translateTo(newX, newY, duration);
                 if (that.isAnimating) {
                     that.rAF(step);
@@ -217,7 +212,7 @@ export default {
             this.isAnimating = true;
             step();
         },
-        scrollTo(x, y, time, easing) {
+        scrollTo(x, y, time = 0, easing) {
             easing = easing || this.EASEING.circular;
             if (easing.style) {
                 this.transitionTimingFunction = easing.style;
@@ -375,6 +370,7 @@ export default {
 
             newX = momentumX.destination;
             newY = momentumY.destination;
+
             const time = Math.max(momentumX.duration, momentumY.duration);
 
             if (newX !== this.x || newY !== this.y) {
@@ -439,6 +435,23 @@ export default {
             this.refresh();
         });
         this.EASEING = {
+            easeOut: {
+                style: 'cubic-bezier(0.1, 0.57, 0.1, 1)',
+                fn: function (k) {
+                    // console.log(k, Math.pow(k - 2, 3) + 2);
+                    return Math.pow(k - 1, 3) + 1;
+                    // return k;
+                }
+            },
+            easeInOut: {
+                style: 'cubic-bezier(0.1, 0.57, 0.1, 1)',
+                fn: function (k) {
+                    if (k / 2 < 1) {
+                        return Math.pow(k, 3) / 2
+                    }
+                    return Math.pow(k - 2, 3) + 2;
+                }
+            },
             quadratic: {
                 style: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)',
                 fn: function (k) {
