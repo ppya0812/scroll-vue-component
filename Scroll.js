@@ -361,6 +361,11 @@ export default {
             }
             let newX = Math.round(this.x);
             let newY = Math.round(this.y);
+            if (newX > 0 || newX < this.maxScrollX || newY > 0 || newY < this.maxScrollY) {
+                // 处理尾部开始滑动的碰壁回弹
+                this.scrollTo(newX, newY, 50);
+                return;
+            }
             const momentumX = this.hasHorizontalScroll
             ? this.momentum(this.x, this.startX, duration, this.maxScrollX, this.wrapperWidth)
             : {destination: newX, duration: 0};
