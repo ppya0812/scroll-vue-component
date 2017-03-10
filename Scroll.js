@@ -104,7 +104,7 @@ export default {
             let distance = current - start;
             const speed = Math.abs(distance) / time;
             // 减速变量
-            deceleration = deceleration === undefined ? 0.0006 : deceleration;
+            deceleration = deceleration === undefined ? 0.001 : deceleration;
             // 减速路程
             let destination = current + (speed * speed) / (2.5 * deceleration) * (distance < 0 ? -1 : 1);
             // 持续时间 速度消减至0所需时间
@@ -124,8 +124,8 @@ export default {
             // 获得最终移动距离 & 持续时间
             return {
                 destination: Math.round(destination),
-                duration: Math.min(Math.round(duration) / 2, 600)
-                // duration: duration
+                // duration: Math.min(Math.round(duration) / 2, 600)
+                duration: duration
             };
         },
         refresh() {
@@ -176,7 +176,7 @@ export default {
             this.y = y;
         },
         rAF(callback) {
-            this.timer = setTimeout(callback, 1000 / 60);
+            this.timer = setTimeout(callback, 1000 / 100);
         },
         animateTo(destX, destY, duration, easingFn) {
             const that = this;
@@ -194,13 +194,13 @@ export default {
                         // 碰壁回弹效果处理
                         const backNewX = destX > 0 ? 0 : (destX < that.maxScrollX ? that.maxScrollX : destX);
                         const backNewY = destX > 0 ? 0 : (destY < that.maxScrollY ? that.maxScrollY : destY);
-                        that.scrollTo(backNewX, backNewY, 100, that.EASEING.back);
+                        that.scrollTo(backNewX, backNewY, 600);
+                        // that.scrollTo(backNewX, backNewY, 100, that.EASEING.quadratic);
                     }
                     return;
                 }
                 now = (now - startTime) / duration;
                 const easing = easingFn(now);
-                // const easing = that.EASEING.circular.fn(now);
                 that.easing = easing;
                 const newX = (destX - startX) * easing + startX;
                 const newY = (destY - startY) * easing + startY;
