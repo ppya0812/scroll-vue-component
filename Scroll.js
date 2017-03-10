@@ -122,7 +122,6 @@ export default {
                 duration = distance / speed;
             }
             // 获得最终移动距离 & 持续时间
-            console.log(destination / duration);
             return {
                 destination: Math.round(destination),
                 // duration: Math.min(Math.round(duration) / 2, 600)
@@ -259,7 +258,6 @@ export default {
             // 触点
             this.pointX = point.clientX;
             this.pointY = point.clientY;
-            console.log(this.x);
             this.translateTo(this.x, this.y);
             clearTimeout(this.timer);
         },
@@ -280,9 +278,13 @@ export default {
             this.distY += deltaY;
             const absDistX = Math.abs(this.distX);
             const absDistY = Math.abs(this.distY);
+            console.log(absDistX, absDistY);
             if (this.scrollDirection === 'horizontal') {
                 if (absDistY > absDistX) {
                     return;
+                }
+                if (absDistX > 10) {
+                    e.preventDefault();
                 }
             }
             if (this.scrollDirection === 'vertical') {
