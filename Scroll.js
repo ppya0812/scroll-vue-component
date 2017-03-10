@@ -176,7 +176,7 @@ export default {
             this.y = y;
         },
         rAF(callback) {
-            this.timer = setTimeout(callback, 1000 / 100);
+            this.timer = setTimeout(callback, 1000 / 60);
         },
         animateTo(destX, destY, duration, easingFn) {
             const that = this;
@@ -213,7 +213,7 @@ export default {
             step();
         },
         scrollTo(x, y, time = 0, easing) {
-            easing = easing || this.EASEING.easeOut;
+            easing = easing || this.EASEING.circular;
             if (easing.style) {
                 this.transitionTimingFunction = easing.style;
             }
@@ -374,10 +374,10 @@ export default {
             const time = Math.max(momentumX.duration, momentumY.duration);
 
             if (newX !== this.x || newY !== this.y) {
-                if (newX > 0 || newX < this.maxScrollX || newY > 0 || newY < this.maxScrollY) {
+                // if (newX > 0 || newX < this.maxScrollX || newY > 0 || newY < this.maxScrollY) {
                     // 处理碰壁回弹
-                    easing = this.EASEING.quadratic;
-                }
+                    // easing = this.EASEING.circular;
+                // }
                 this.scrollTo(newX, newY, time, easing);
             }
             // 滚动完成时尾部回调
