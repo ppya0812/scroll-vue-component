@@ -1,6 +1,6 @@
 {
   "name": "scroll-vue-component",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "description": "scroll for vue",
   "main": "scroll-vue.js",
   "scripts": {

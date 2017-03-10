@@ -104,7 +104,7 @@ export default {
             let distance = current - start;
             const speed = Math.abs(distance) / time;
             // 减速变量
-            deceleration = deceleration === undefined ? 0.001 : deceleration;
+            deceleration = deceleration === undefined ? 0.0006 : deceleration;
             // 减速路程
             let destination = current + (speed * speed) / (2.5 * deceleration) * (distance < 0 ? -1 : 1);
             // 持续时间 速度消减至0所需时间
@@ -122,10 +122,11 @@ export default {
                 duration = distance / speed;
             }
             // 获得最终移动距离 & 持续时间
+            console.log(destination / duration);
             return {
                 destination: Math.round(destination),
                 // duration: Math.min(Math.round(duration) / 2, 600)
-                duration: duration
+                duration: Math.round(duration)
             };
         },
         refresh() {
@@ -165,6 +166,8 @@ export default {
         translateTo(x = 0, y = 0, time = 0) {
             x = Math.round(x);
             y = Math.round(y);
+            this.x = x;
+            this.y = y;
             this.scrollerStyle = {
                 transform: `translate(${x}px, ${y}px) translateZ(0px)`,
                 transitionDuration: `${time}ms`
@@ -172,8 +175,6 @@ export default {
             if (this.transitionTimingFunction) {
                 this.scrollerStyle.transitionTimingFunction = this.transitionTimingFunction;
             }
-            this.x = x;
-            this.y = y;
         },
         rAF(callback) {
             this.timer = setTimeout(callback, 1000 / 60);
@@ -258,6 +259,7 @@ export default {
             // 触点
             this.pointX = point.clientX;
             this.pointY = point.clientY;
+            console.log(this.x);
             this.translateTo(this.x, this.y);
             clearTimeout(this.timer);
         },
