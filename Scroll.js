@@ -1,4 +1,4 @@
-require('./scroll.less');
+require('./Scroll.less');
 
 export default {
     data() {
@@ -7,6 +7,8 @@ export default {
                 transform: 'translate(0px, 0px) translateZ(0px)',
                 transitionDuration: '0ms'
             },
+            transitionDuration: 0,
+            scrollTime: 600,
             timer: null,
             maxScrollX: 0,
             maxScrollY: 0,
@@ -34,9 +36,9 @@ export default {
             type: Boolean,
             default: false  // 阴影部分展示
         },
-        activeEvent: {
+        scrollToEle: {
             // active dom
-            type: Event,
+            type: HTMLDivElement,
             default: undefined
         },
         moveCallback: {
@@ -66,36 +68,40 @@ export default {
         }
     },
     watch: {
-        activeEvent() {
-            const {activeEvent, wrapperWidth, wrapperHeight, maxScrollX, maxScrollY, activeTargetPos} = this;
-            const activeTarget = activeEvent.target;
-            const actPW = Math.min(wrapperWidth, document.body.clientWidth); // 滚动块的显示区域
-            const actW = activeTarget.clientWidth; // 当前元素内容
-            const actPH = Math.min(wrapperHeight, document.body.clientHeight); // 滚动块的显示区域
-            const actH = activeTarget.clientHeight; // 当前元素内容
-            let newX = activeTarget.offsetLeft - actPW / 2;
-            let newY = activeTarget.offsetTop - actPH / 2;
+        scrollToEle() {
+            const { scrollToEle, activeTargetPos } = this;
+            let pos = this.getOffset(scrollToEle);
+            pos.left -= this.wrapperOffset.left;
+            pos.top -= this.wrapperOffset.top;
+            const elRect = this.getRect(scrollToEle);
+            const wrapperRect = this.getRect(this.wrapper);
+            let offsetX = Math.round(elRect.width / 2 - wrapperRect.width / 2);
+            let offsetY = Math.round(elRect.height / 2 - wrapperRect.height / 2);
+
             switch (activeTargetPos) {
             case 'left':case 'top':
-                newX = activeTarget.offsetLeft - actPW / 5;
-                newY = activeTarget.offsetTop - actPH / 5;
+                offsetX = Math.round(elRect.width / 2 - wrapperRect.width / 5);
+                offsetY = Math.round(elRect.height / 2 - wrapperRect.height / 5);
                 break;
             case 'right':case 'bottom':
-                newX = activeTarget.offsetLeft - actPW * 2 / 3;
-                newY = activeTarget.offsetTop - actPH * 2 / 3;
+                offsetX = Math.round(elRect.width / 2 - wrapperRect.width * 2 / 3);
+                offsetY = Math.round(elRect.height / 2 - wrapperRect.height * 2 / 3);
                 break;
             case 'center':
-                newX = activeTarget.offsetLeft - actPW / 2;
-                newY = activeTarget.offsetTop - actPH / 2;
+                offsetX = Math.round(elRect.width / 2 - wrapperRect.width / 2);
+                offsetY = Math.round(elRect.height / 2 - wrapperRect.height / 2);
                 break;
             default:
-                newX = activeTarget.offsetLeft - actPW / 2;
-                newY = activeTarget.offsetTop - actPH / 2;
+                offsetX = Math.round(elRect.width / 2 - wrapperRect.width / 2);
+                offsetY = Math.round(elRect.height / 2 - wrapperRect.height / 2);
             }
-            newX = newX <= 0 ? 0 : (newX > actW - maxScrollX ? -this.x : newX);
-            newY = newY <= 0 ? 0 : (newY > actH - maxScrollY ? -this.y : newY);
-            this.transitionTimingFunction = this.EASEING.circular.style;
-            this.translateTo(-newX, -newY, 300);
+
+            pos.left -= offsetX || 0;
+            pos.top -= offsetY || 0;
+
+            pos.left = pos.left > 0 ? 0 : pos.left < this.maxScrollX ? this.maxScrollX : pos.left;
+            pos.top = pos.top > 0 ? 0 : pos.top < this.maxScrollY ? this.maxScrollY : pos.top;
+            this.scrollTo(pos.left, pos.top, 300, this.EASEING.circular);
         }
     },
     methods: {
@@ -106,7 +112,7 @@ export default {
             // 减速变量
             deceleration = deceleration === undefined ? 0.0006 : deceleration;
             // 减速路程
-            let destination = current + (speed * speed) / (2.5 * deceleration) * (distance < 0 ? -1 : 1);
+            let destination = current + (speed * speed) / (2 * deceleration) * (distance < 0 ? -1 : 1);
             // 持续时间 速度消减至0所需时间
             let duration = speed / deceleration;
             if (destination < lowerMargin) {
@@ -124,8 +130,29 @@ export default {
             // 获得最终移动距离 & 持续时间
             return {
                 destination: Math.round(destination),
-                // duration: Math.min(Math.round(duration) / 2, 600)
-                duration: Math.round(duration)
+                duration: duration
+            };
+        },
+        getOffset(el) {
+            let left = -el.offsetLeft;
+            let top = -el.offsetTop;
+
+            while (el === el.offsetParent) {
+                left -= el.offsetLeft;
+                top -= el.offsetTop;
+            }
+
+            return {
+                left: left,
+                top: top
+            };
+        },
+        getRect(el) {
+            return {
+                top: el.offsetTop,
+                left: el.offsetLeft,
+                width: el.offsetWidth,
+                height: el.offsetHeight
             };
         },
         refresh() {
@@ -133,6 +160,8 @@ export default {
             const wrapper = this.$refs.scroll.parentElement;
             this.scroller = scroller;
             this.wrapper = wrapper;
+            // offset
+            this.wrapperOffset = this.getOffset(this.wrapper);
             // wrapper
             this.wrapperWidth = wrapper.clientWidth;
             this.wrapperHeight = wrapper.clientHeight;
@@ -159,7 +188,7 @@ export default {
         },
         calcPath(x) {
             // svg阴影处理
-            x = x < 0 ? Math.max(Math.floor(100 + (x - this.maxScrollX) / 5), 94) : 100;
+            x = x < 0 ? Math.max(Math.floor(100 + (x - this.maxScrollX) / 10), 95) : 100;
             return `M100 0 C ${x} 5, ${x} 95, 100 100`;
         },
         translateTo(x = 0, y = 0, time = 0) {
@@ -169,7 +198,7 @@ export default {
             this.y = y;
             this.scrollerStyle = {
                 transform: `translate(${x}px, ${y}px) translateZ(0px)`,
-                transitionDuration: `${time}ms`
+                transitionDuration: `${this.transitionDuration}ms`
             };
             if (this.transitionTimingFunction) {
                 this.scrollerStyle.transitionTimingFunction = this.transitionTimingFunction;
@@ -187,16 +216,18 @@ export default {
             // 处理缓动的step函数
             function step() {
                 let now = that.getCurrentTime();
-                if (now >= destTime - 10) {
+                if (now >= destTime) {
                     that.isAnimating = false;
-                    that.scrollTo(destX, destY);
-                    if (destX > 0 || destX < that.maxScrollX || destY > 0 || destY < that.maxScrollY) {
-                        // 碰壁回弹效果处理
-                        const backNewX = destX > 0 ? 0 : (destX < that.maxScrollX ? that.maxScrollX : destX);
-                        const backNewY = destX > 0 ? 0 : (destY < that.maxScrollY ? that.maxScrollY : destY);
-                        that.scrollTo(backNewX, backNewY, 600);
-                        // that.scrollTo(backNewX, backNewY, 100, that.EASEING.quadratic);
-                    }
+                    that.transitionDuration = 0;
+                    that.translateTo(destX, destY);
+                    // if (destX > 0 || destX < that.maxScrollX || destY > 0 || destY < that.maxScrollY) {
+                    //     // 碰壁回弹效果处理
+                    //     const backNewX = destX > 0 ? 0 : (destX < that.maxScrollX ? that.maxScrollX : destX);
+                    //     const backNewY = destX > 0 ? 0 : (destY < that.maxScrollY ? that.maxScrollY : destY);
+                    //     that.scrollTo(backNewX, backNewY, 300);
+                    //     // that.scrollTo(backNewX, backNewY, 100, that.EASEING.quadratic);
+                    // }
+                    that.resetScroll(that.scrollTime);
                     return;
                 }
                 now = (now - startTime) / duration;
@@ -204,7 +235,8 @@ export default {
                 that.easing = easing;
                 const newX = (destX - startX) * easing + startX;
                 const newY = (destY - startY) * easing + startY;
-                that.translateTo(newX, newY, duration);
+                that.translateTo(newX, newY);
+                that.transitionDuration = that.scrollTime;
                 if (that.isAnimating) {
                     that.rAF(step);
                 }
@@ -226,6 +258,29 @@ export default {
         getCurrentTime() {
             // 获取当前时间
             return Date.now() || new Date().getTime();
+        },
+        resetScroll(time = 0) {
+            let x = this.x;
+            let y = this.y;
+            if (!this.hasHorizontalScroll || this.x > 0) {
+                x = 0;
+            } else if (this.x < this.maxScrollX) {
+                x = this.maxScrollX;
+            }
+
+            if (!this.hasVerticalScroll || this.y > 0) {
+                y = 0;
+            } else if (this.y < this.maxScrollY) {
+                y = this.maxScrollY;
+            }
+
+            if (x === this.x && y === this.y) {
+                return false;
+            }
+
+            this.scrollTo(x, y, time, this.EASEING.circular);
+
+            return true;
         },
         // calcPos(e) {
         //     // point 触点
@@ -259,6 +314,7 @@ export default {
             this.pointX = point.clientX;
             this.pointY = point.clientY;
             this.translateTo(this.x, this.y);
+            this.transitionDuration = 0;
             clearTimeout(this.timer);
         },
         onTouchmove(e) {
@@ -278,7 +334,6 @@ export default {
             this.distY += deltaY;
             const absDistX = Math.abs(this.distX);
             const absDistY = Math.abs(this.distY);
-            console.log(absDistX, absDistY);
             if (this.scrollDirection === 'horizontal') {
                 if (absDistY > absDistX) {
                     return;
@@ -297,6 +352,11 @@ export default {
             if (timestamp - this.endTime > 300 && (absDistX < 10 && absDistY < 10)) {
                 return;
             }
+            if (this.scrollDirection === 'horizontal') {
+                newY = 0;
+            } else {
+                newX = 0;
+            }
             deltaX = this.hasHorizontalScroll ? deltaX : 0;
             deltaY = this.hasVerticalScroll ? deltaY : 0;
             // // this.x this.y 是最近上一次的scroller位置
@@ -312,11 +372,6 @@ export default {
             this.directionY = deltaY > 0 ? 1 : deltaY < 0 ? -1 : 0; // -1 手势向上   1 手势向下
             //
             // this.moved = true;
-            if (this.scrollDirection === 'horizontal') {
-                newY = 0;
-            } else {
-                newX = 0;
-            }
             this.translateTo(newX, newY);
             if (timestamp - this.startTime > 300) {
                 // 300ms更新一次
@@ -350,57 +405,66 @@ export default {
             this.path = this.calcPath(0);
             this.endTime = this.getCurrentTime();
             let easing = '';
+            let time = 0;
+            let newX = Math.round(this.x);
+            let newY = Math.round(this.y);
             const duration = this.endTime - this.startTime;
-            const absDistX = Math.abs(this.distX);
-            const absDistY = Math.abs(this.distY);
+            const absDistX = Math.abs(newX - this.startX);
+            const absDistY = Math.abs(newY - this.startY);
+
             if (this.scrollDirection === 'horizontal') {
-                if (absDistY >= absDistX) {
+                if (absDistY > absDistX) {
                     return;
                 }
             }
             if (this.scrollDirection === 'vertical') {
-                if (absDistY <= absDistX) {
+                if (absDistY < absDistX) {
                     return;
                 }
             }
-            let newX = Math.round(this.x);
-            let newY = Math.round(this.y);
-            if (newX > 0 || newX < this.maxScrollX || newY > 0 || newY < this.maxScrollY) {
-                // 处理尾部开始滑动的碰壁回弹
-                this.scrollTo(newX, newY, 50);
+            // if (newX > 0 || newX < this.maxScrollX || newY > 0 || newY < this.maxScrollY) {
+            //     // 处理尾部开始滑动的碰壁回弹
+            //     this.scrollTo(newX, newY, 50);
+            //     return;
+            // }
+            if (this.resetScroll(this.scrollTime)) {
+                // 滚动完成时尾部回调
+                if (typeof this.afterRelease === 'function') {
+                    if ((this.x <= this.maxScrollX && !~this.directionX) ||
+                        (this.y <= this.maxScrollY && !~this.directionY)) {
+                        this.afterRelease();
+                    }
+                }
+                // 滚动完成时头部回调
+                if (typeof this.beforeRelease === 'function') {
+                    if ((this.x >= 0 && this.directionX === 1) || (this.y >= 0 && this.directionY === 1)) {
+                        this.beforeRelease();
+                    }
+                }
                 return;
             }
-            const momentumX = this.hasHorizontalScroll
-            ? this.momentum(this.x, this.startX, duration, this.maxScrollX, this.wrapperWidth)
-            : {destination: newX, duration: 0};
-            const momentumY = this.hasVerticalScroll
-            ? this.momentum(this.y, this.startY, duration, this.maxScrollY, this.wrapperHeight)
-            : {destination: newY, duration: 0};
+            this.scrollTo(newX, newY);
 
-            newX = momentumX.destination;
-            newY = momentumY.destination;
+            if (duration < 300) {
+                const momentumX = this.hasHorizontalScroll
+                ? this.momentum(this.x, this.startX, duration, this.maxScrollX, this.wrapperWidth)
+                : {destination: newX, duration: 0};
+                const momentumY = this.hasVerticalScroll
+                ? this.momentum(this.y, this.startY, duration, this.maxScrollY, this.wrapperHeight)
+                : {destination: newY, duration: 0};
 
-            const time = Math.max(momentumX.duration, momentumY.duration);
+                newX = momentumX.destination;
+                newY = momentumY.destination;
+
+                time = Math.max(momentumX.duration, momentumY.duration);
+            }
 
             if (newX !== this.x || newY !== this.y) {
                 // if (newX > 0 || newX < this.maxScrollX || newY > 0 || newY < this.maxScrollY) {
                     // 处理碰壁回弹
-                    // easing = this.EASEING.circular;
+                    // easing = this.EASEING.quadratic;
                 // }
                 this.scrollTo(newX, newY, time, easing);
-            }
-            // 滚动完成时尾部回调
-            if (typeof this.afterRelease === 'function') {
-                if ((this.x <= this.maxScrollX && !~this.directionX) ||
-                    (this.y <= this.maxScrollY && !~this.directionY)) {
-                    this.afterRelease();
-                }
-            }
-            // 滚动完成时头部回调
-            if (typeof this.beforeRelease === 'function') {
-                if ((this.x >= 0 && this.directionX === 1) || (this.y >= 0 && this.directionY === 1)) {
-                    this.beforeRelease();
-                }
             }
         }
     },
