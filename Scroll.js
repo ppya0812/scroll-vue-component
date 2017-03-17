@@ -46,12 +46,12 @@ export default {
             type: Function,
             default: i => 0
         },
-        beyondCallback: {
+        beyondFn: {
             // 滚动时超出更多时回调
             type: Function,
             default: i => 0
         },
-        cancelBeyondCallback: {
+        cancelBeyondFn: {
             // 滚动时取消超出更多时回调
             type: Function,
             default: i => 0
@@ -69,7 +69,7 @@ export default {
     },
     watch: {
         scrollToEle() {
-            const { scrollToEle, activeTargetPos } = this;
+            const {scrollToEle, activeTargetPos} = this;
             let pos = this.getOffset(scrollToEle);
             pos.left -= this.wrapperOffset.left;
             pos.top -= this.wrapperOffset.top;
@@ -209,8 +209,8 @@ export default {
         },
         animateTo(destX, destY, duration, easingFn) {
             const that = this;
-            const startX = this.x;
-            const startY = this.y;
+            // const startX = this.x;
+            // const startY = this.y;
             const startTime = this.getCurrentTime();
             const destTime = startTime + duration;
             // 处理缓动的step函数
@@ -224,7 +224,6 @@ export default {
                     //     // 碰壁回弹效果处理
                     //     const backNewX = destX > 0 ? 0 : (destX < that.maxScrollX ? that.maxScrollX : destX);
                     //     const backNewY = destX > 0 ? 0 : (destY < that.maxScrollY ? that.maxScrollY : destY);
-                    //     that.scrollTo(backNewX, backNewY, 300);
                     //     // that.scrollTo(backNewX, backNewY, 100, that.EASEING.quadratic);
                     // }
                     that.resetScroll(that.scrollTime);
@@ -233,10 +232,11 @@ export default {
                 now = (now - startTime) / duration;
                 const easing = easingFn(now);
                 that.easing = easing;
-                const newX = (destX - startX) * easing + startX;
-                const newY = (destY - startY) * easing + startY;
-                that.translateTo(newX, newY);
-                that.transitionDuration = that.scrollTime;
+                // let newX = (destX - startX) * easing + startX;
+                // let newY = (destY - startY) * easing + startY;
+                // 防抖
+                that.transitionDuration = duration;
+                that.translateTo(destX, destY);
                 if (that.isAnimating) {
                     that.rAF(step);
                 }
@@ -388,17 +388,18 @@ export default {
                 this.moveCallback();
             }
             // 滚动超出时回调
-            if (typeof this.beyondCallback === 'function') {
-                const beyondStatus = this.scrollDirection === 'horizontal'
-                ? this.x <= this.maxScrollX : this.y <= this.maxScrollY;
-                beyondStatus && this.beyondCallback();
+            if (typeof this.beyondFn === 'function') {
+                this.beyondStatus = this.scrollDirection === 'horizontal'
+                ? this.x && this.x <= this.maxScrollX : this.y && this.y <= this.maxScrollY;
+                this.beyondStatus && this.beyondFn();
             }
             // 滚动超出取消时回调
-            if (typeof this.cancelBeyondCallback === 'function') {
+            if (typeof this.cancelBeyondFn === 'function' && this.beyondStatus) {
                 const cancelBeyondStatus = this.scrollDirection === 'horizontal'
                 ? (newX > this.maxScrollX || this.directionX === 1)
                 : (newY > this.maxScrollY || this.directionY === 1);
-                cancelBeyondStatus && this.cancelBeyondCallback();
+                cancelBeyondStatus && this.cancelBeyondFn();
+                this.beyondStatus = false;
             }
         },
         onTouchend(e) {
@@ -430,8 +431,7 @@ export default {
             if (this.resetScroll(this.scrollTime)) {
                 // 滚动完成时尾部回调
                 if (typeof this.afterRelease === 'function') {
-                    if ((this.x <= this.maxScrollX && !~this.directionX) ||
-                        (this.y <= this.maxScrollY && !~this.directionY)) {
+                    if ((this.x <= this.maxScrollX && !~this.directionX) || (this.y <= this.maxScrollY && !~this.directionY)) {
                         this.afterRelease();
                     }
                 }
@@ -443,8 +443,8 @@ export default {
                 }
                 return;
             }
-            this.scrollTo(newX, newY);
 
+            this.scrollTo(newX, newY);
             if (duration < 300) {
                 const momentumX = this.hasHorizontalScroll
                 ? this.momentum(this.x, this.startX, duration, this.maxScrollX, this.wrapperWidth)
@@ -460,10 +460,10 @@ export default {
             }
 
             if (newX !== this.x || newY !== this.y) {
-                // if (newX > 0 || newX < this.maxScrollX || newY > 0 || newY < this.maxScrollY) {
+                if (newX > 0 || newX < this.maxScrollX || newY > 0 || newY < this.maxScrollY) {
                     // 处理碰壁回弹
-                    // easing = this.EASEING.quadratic;
-                // }
+                    easing = this.EASEING.quadratic;
+                }
                 this.scrollTo(newX, newY, time, easing);
             }
         }
@@ -519,7 +519,7 @@ export default {
                 style: 'cubic-bezier(0.1, 0.57, 0.1, 1)',
                 fn: function (k) {
                     if (k / 2 < 1) {
-                        return Math.pow(k, 3) / 2
+                        return Math.pow(k, 3) / 2;
                     }
                     return Math.pow(k - 2, 3) + 2;
                 }
@@ -539,7 +539,7 @@ export default {
             back: {
                 style: 'cubic-bezier(0.175, 0.885, 0.32, 1.275)',
                 fn: function (k) {
-                    var b = 4;
+                    let b = 4;
                     return (k = k - 1) * k * ((b + 1) * k + b) + 1;
                 }
             },
@@ -552,9 +552,8 @@ export default {
                         return 7.5625 * (k -= (1.5 / 2.75)) * k + 0.75;
                     } else if (k < (2.5 / 2.75)) {
                         return 7.5625 * (k -= (2.25 / 2.75)) * k + 0.9375;
-                    } else {
-                        return 7.5625 * (k -= (2.625 / 2.75)) * k + 0.984375;
                     }
+                    return 7.5625 * (k -= (2.625 / 2.75)) * k + 0.984375;
                 }
             },
             elastic: {
@@ -563,11 +562,14 @@ export default {
                     const f = 0.22;
                     const e = 0.4;
 
-                    if (k === 0) { return 0; }
-                    if (k === 1) { return 1; }
+                    if (k === 0) {
+                        return 0;
+                    } else if (k === 1) {
+                        return 1;
+                    }
                     return (e * Math.pow(2, -10 * k) * Math.sin((k - f / 4) * (2 * Math.PI) / f) + 1);
                 }
             }
-        }
+        };
     }
 };

@@ -37,14 +37,20 @@ github: <https://github.com/ppya0812/scroll-vue-component>
     import Scroll from 'xxx/components/Scroll';
     data() {
         return {
-            activeEvent: null,
+            scrollToEle: undefined,
             moreShadow: true, // 滚动至尾部是否展示阴影效果（仅对水平滑动有效）
             scrollDirection: 'horizontal' // (horizontal/vertical, 默认horizontal)
         };
     },
+    components: {
+        Scroll
+    },
     methods: {
-        activeIndex(e) {
-            this.activeEvent = e;
+        scrollToActivedElement() {
+            // 确保激活的分类在可视区域
+            Vue.nextTick(() => {
+                this.scrollToEle = this.$el.querySelector('.active');
+            });
         },
         afterRelease() {
             console.log('afterRelease');
@@ -59,15 +65,14 @@ github: <https://github.com/ppya0812/scroll-vue-component>
 ```
 
 ## 支持功能(API -- props参数):
-
-name                 |     type |  default   |                        description
--------------------- | -------: | :--------: | :--------------------------------------------------------:
-scrollDirection      |   string | horizontal |                 滚动方向(horizontal/vertical)
-activeEvent          |    Event | undefined  |             滚动列表特定元素的domevent(activeEvent： '')
-activeTargetPos      |   String |   center   | 所传入的滚动DOM的位置(水平滚动center/left/right, 垂直滚动center/top/bottom)
-moveCallback         | Function |   i => 0   |                         滚动过程中的回调函数
-afterRelease         | Function |   i => 0   |                    列表尾部滚动完成释放touch的回调函数
-beforeRelease        | Function |   i => 0   |                    列表头部滚动完成释放touch的回调函数
-beyondCallback       | Function |   i => 0   |                         滚动时超出更多时回调
-cancelBeyondCallback | Function |   i => 0   |                        滚动时取消超出更多时回调
-moreShadow           |  Boolean |   false    |                  滚动至尾部是否展示阴影效果（仅对水平滑动有效）
+name            |           type |  default   |                        description
+--------------- | -------------: | :--------: | :--------------------------------------------------------:
+scrollDirection |         string | horizontal |                 滚动方向(horizontal/vertical)
+scrollToEle     | HTMLDivElement | undefined  |             滚动列表特定元素的domevent(activeEvent： '')
+activeTargetPos |         String |   center   | 所传入的滚动DOM的位置(水平滚动center/left/right, 垂直滚动center/top/bottom)
+moveCallback    |       Function |   i => 0   |                         滚动过程中的回调函数
+afterRelease    |       Function |   i => 0   |                    列表尾部滚动完成释放touch的回调函数
+beforeRelease   |       Function |   i => 0   |                    列表头部滚动完成释放touch的回调函数
+beyondFn        |       Function |   i => 0   |                         滚动时超出更多时回调
+cancelBeyondFn  |       Function |   i => 0   |                        滚动时取消超出更多时回调
+moreShadow      |        Boolean |   false    |                  滚动至尾部是否展示阴影效果（仅对水平滑动有效）
