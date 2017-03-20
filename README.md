@@ -1,5 +1,5 @@
 # 移动端水平垂直滚动公用组件 （for vue)
-    * 采用easeIn ease等缓动算法，是一款移动端轻量级滚动插件。
+    * 采用quadratic 、circular 、back等缓动算法，是一款移动端轻量级滚动插件。
 
 ```
 * 支持功能：
@@ -23,7 +23,7 @@ github: <https://github.com/ppya0812/scroll-vue-component>
 // xxx.vue
 <template>
     <div class="XXX">
-        <scroll :activeEvent="activeEvent" :moreShadow="moreShadow" :afterRelease="afterRelease" :beforeRelease="beforeRelease">
+        <scroll :scrollToEle="scrollToEle" :moreShadow="moreShadow" :afterRelease="afterRelease" :beforeRelease="beforeRelease">
             <div class="category-inner">
                 <div v-for="(v, i) in category" :key="v.id" @click="activeIndex" :class="['category-item', { active: v.id === activedCategory }]">
                     {{ v.name }}

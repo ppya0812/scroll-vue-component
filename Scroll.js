@@ -101,7 +101,7 @@ export default {
 
             pos.left = pos.left > 0 ? 0 : pos.left < this.maxScrollX ? this.maxScrollX : pos.left;
             pos.top = pos.top > 0 ? 0 : pos.top < this.maxScrollY ? this.maxScrollY : pos.top;
-            this.scrollTo(pos.left, pos.top, 300, this.EASEING.circular);
+            this.scrollTo(pos.left, pos.top, this.scrollTime, this.EASEING.circular);
         }
     },
     methods: {
@@ -120,7 +120,8 @@ export default {
                 // destination = Math.max(destination, lowerMargin);
                 distance = Math.abs(destination - current);
                 duration = distance / speed;
-            } else if (destination > 0) {
+            }
+            else if (destination > 0) {
                 // 向右
                 destination = wrapperSize ? wrapperSize / 2.5 * (speed / 8) : 0;
                 // destination = 0;
@@ -251,7 +252,8 @@ export default {
             }
             if (!time) {
                 this.translateTo(x, y);
-            } else {
+            }
+            else {
                 this.animateTo(x, y, time, easing.fn);
             }
         },
@@ -264,13 +266,15 @@ export default {
             let y = this.y;
             if (!this.hasHorizontalScroll || this.x > 0) {
                 x = 0;
-            } else if (this.x < this.maxScrollX) {
+            }
+            else if (this.x < this.maxScrollX) {
                 x = this.maxScrollX;
             }
 
             if (!this.hasVerticalScroll || this.y > 0) {
                 y = 0;
-            } else if (this.y < this.maxScrollY) {
+            }
+            else if (this.y < this.maxScrollY) {
                 y = this.maxScrollY;
             }
 
@@ -299,7 +303,7 @@ export default {
         onTouchstart(e) {
             const point = e.touches ? e.touches[0] : e;
             // 初始化数据
-            // this.moved = false;    // 是否移动的标志
+            this.moved = false;    // 是否移动的标志
             this.distX = 0;        //
             this.distY = 0;        //
             this.directionX = 0;    // x方向移动数
@@ -319,6 +323,7 @@ export default {
         },
         onTouchmove(e) {
             // const pos = this.calcPos(e);
+            this.moved = true;
             // point 触点
             const point = e.changedTouches ? e.changedTouches[0] : e;
             let deltaX = point.clientX - this.pointX; // 当前触点的clientX - 开始时的clientX = 触点当次增量x
@@ -354,7 +359,8 @@ export default {
             }
             if (this.scrollDirection === 'horizontal') {
                 newY = 0;
-            } else {
+            }
+            else {
                 newX = 0;
             }
             deltaX = this.hasHorizontalScroll ? deltaX : 0;
@@ -413,6 +419,11 @@ export default {
             const absDistX = Math.abs(newX - this.startX);
             const absDistY = Math.abs(newY - this.startY);
 
+            // 判断是否为点击
+            if (!this.moved) {
+                return;
+            }
+
             if (this.scrollDirection === 'horizontal') {
                 if (absDistY > absDistX) {
                     return;
@@ -431,7 +442,8 @@ export default {
             if (this.resetScroll(this.scrollTime)) {
                 // 滚动完成时尾部回调
                 if (typeof this.afterRelease === 'function') {
-                    if ((this.x <= this.maxScrollX && !~this.directionX) || (this.y <= this.maxScrollY && !~this.directionY)) {
+                    if ((this.x <= this.maxScrollX && !~this.directionX)
+                        || (this.y <= this.maxScrollY && !~this.directionY)) {
                         this.afterRelease();
                     }
                 }
@@ -548,9 +560,11 @@ export default {
                 fn: function (k) {
                     if ((k /= 1) < (1 / 2.75)) {
                         return 7.5625 * k * k;
-                    } else if (k < (2 / 2.75)) {
+                    }
+                    else if (k < (2 / 2.75)) {
                         return 7.5625 * (k -= (1.5 / 2.75)) * k + 0.75;
-                    } else if (k < (2.5 / 2.75)) {
+                    }
+                    else if (k < (2.5 / 2.75)) {
                         return 7.5625 * (k -= (2.25 / 2.75)) * k + 0.9375;
                     }
                     return 7.5625 * (k -= (2.625 / 2.75)) * k + 0.984375;
@@ -564,7 +578,8 @@ export default {
 
                     if (k === 0) {
                         return 0;
-                    } else if (k === 1) {
+                    }
+                    else if (k === 1) {
                         return 1;
                     }
                     return (e * Math.pow(2, -10 * k) * Math.sin((k - f / 4) * (2 * Math.PI) / f) + 1);
