@@ -71,6 +71,7 @@ scrollDirection |         string | horizontal |                 滚动方向(hor
 scrollToEle     | HTMLDivElement | undefined  |             滚动列表特定元素的domevent(activeEvent： '')
 activeTargetPos |         String |   center   | 所传入的滚动DOM的位置(水平滚动center/left/right, 垂直滚动center/top/bottom)
 moveCallback    |       Function |   i => 0   |                         滚动过程中的回调函数
+moveEndback    |       Function |   i => 0   |                         滚动过程中的回调函数
 afterRelease    |       Function |   i => 0   |                    列表尾部滚动完成释放touch的回调函数
 beforeRelease   |       Function |   i => 0   |                    列表头部滚动完成释放touch的回调函数
 beyondFn        |       Function |   i => 0   |                         滚动时超出更多时回调
