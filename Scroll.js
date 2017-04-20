@@ -1,6 +1,7 @@
-require('./Scroll.less')
+require('./scroll.less')
 
 export default {
+  name: 'wm-scroll',
   data () {
     return {
       scrollerStyle: {
@@ -30,8 +31,7 @@ export default {
     },
     refreshStatus: {
       // 判断是否需要重新更新组件
-      type: Boolean,
-      default: false
+      type: [Boolean, Number]
     },
     activeTargetPos: {
       type: String,
@@ -79,7 +79,9 @@ export default {
   },
   watch: {
     refreshStatus () {
-      this.refresh()
+      this.$nextTick(() => {
+        this.refresh()
+      })
     },
     scrollToEle () {
       const { scrollToEle, activeTargetPos } = this
@@ -352,6 +354,10 @@ export default {
       this.distY += deltaY
       const absDistX = Math.abs(this.distX)
       const absDistY = Math.abs(this.distY)
+
+      this.directionX = deltaX > 0 ? 1 : deltaX < 0 ? -1 : 0 // -1 手势向左   1 手势向右
+      this.directionY = deltaY > 0 ? 1 : deltaY < 0 ? -1 : 0 // -1 手势向上   1 手势向下
+
       if (this.scrollDirection === 'horizontal') {
         if (absDistY > absDistX) {
           return
@@ -370,6 +376,7 @@ export default {
       if (timestamp - this.endTime > 300 && (absDistX < 10 && absDistY < 10)) {
         return
       }
+
       deltaX = this.hasHorizontalScroll ? deltaX : 0
       deltaY = this.hasVerticalScroll ? deltaY : 0
       // // this.x this.y 是最近上一次的scroller位置
@@ -386,9 +393,7 @@ export default {
       if (newY > 0 || newY < this.maxScrollY) {
         newY = this.y + deltaY / 3
       }
-      this.directionX = deltaX > 0 ? 1 : deltaX < 0 ? -1 : 0 // -1 手势向左   1 手势向右
-      this.directionY = deltaY > 0 ? 1 : deltaY < 0 ? -1 : 0 // -1 手势向上   1 手势向下
-      //
+
       // this.moved = true;
       this.translateTo(newX, newY)
       if (timestamp - this.startTime > 300) {
@@ -521,7 +526,7 @@ export default {
         class='scroll-shadow'
         xmlns='http://www.w3.org/2000/svg'
         viewBox='0 0 100 100'
-      >
+    >
         <path d={this.path} stroke='transparent' fill='#e7e7e7' />
       </svg>
     const scrollClass = {

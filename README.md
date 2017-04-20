@@ -68,6 +68,7 @@ github: <https://github.com/ppya0812/scroll-vue-component>
 name            |           type |  default   |                        description
 --------------- | -------------: | :--------: | :--------------------------------------------------------:
 scrollDirection |         string | horizontal |                 滚动方向(horizontal/vertical)
+refreshStatus   |Boolean, Number |            |                重新更新实例化组件
 scrollToEle     | HTMLDivElement | undefined  |             滚动列表特定元素的domevent(activeEvent： '')
 activeTargetPos |         String |   center   | 所传入的滚动DOM的位置(水平滚动center/left/right, 垂直滚动center/top/bottom)
 moveCallback    |       Function |   i => 0   |                         滚动过程中的回调函数
