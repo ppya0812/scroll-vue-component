@@ -1,7 +1,6 @@
-require('./scroll.less')
+require('./Scroll.less')
 
 export default {
-  name: 'wm-scroll',
   data () {
     return {
       scrollerStyle: {
@@ -31,11 +30,21 @@ export default {
     },
     refreshStatus: {
       // 判断是否需要重新更新组件
-      type: [Boolean, Number]
+      type: [Boolean, Number],
+      default: false
+    },
+    destoryStatus: {
+    // 判断是否全局需要阻止组件滚动
+      type: Boolean
     },
     activeTargetPos: {
       type: String,
       default: 'center' // active dom位置
+    },
+    registerEventName: {
+      // 注册自定义事件监听
+      type: String,
+      default: ''
     },
     moreShadow: {
       type: Boolean,
@@ -211,7 +220,7 @@ export default {
       this.directionY = 0
       this.hasHorizontalScroll = this.maxScrollX < 0
       this.hasVerticalScroll = this.maxScrollY < 0
-      this.translateTo(0, 0)
+      this.translateTo(this.x, this.y)
       // reset moreShadow
       if (this.scrollDirection === 'vertical') {
         this.moreShadow = false
@@ -236,6 +245,8 @@ export default {
       if (this.transitionTimingFunction) {
         this.scrollerStyle.transitionTimingFunction = this.transitionTimingFunction
       }
+      // 事件注册
+      this.registerEvent()
     },
     rAF (callback) {
       this.timer = setTimeout(callback, 1000 / 60)
@@ -295,6 +306,17 @@ export default {
       // 获取当前时间
       return Date.now() || new Date().getTime()
     },
+    dispatch (eventName) {
+      let ev = document.createEvent('Event')
+      ev.initEvent(eventName, true, true)
+      window.dispatchEvent(ev)
+    },
+    registerEvent () {
+      // 事件注册
+      if (this.registerEventName) {
+        this.dispatch(this.registerEventName)
+      }
+    },
     resetScroll (time = 0) {
       let x = this.x
       let y = this.y
@@ -341,6 +363,7 @@ export default {
     onTouchmove (e) {
       // const pos = this.calcPos(e);
       this.moved = true
+
       // point 触点
       const point = e.changedTouches ? e.changedTouches[0] : e
       let deltaX = point.clientX - this.pointX // 当前触点的clientX - 开始时的clientX = 触点当次增量x
@@ -367,9 +390,15 @@ export default {
         }
       }
       if (this.scrollDirection === 'vertical') {
-        e.preventDefault()
         if (absDistY < absDistX) {
           return
+        }
+        if ((this.destoryStatus && !~this.directionY) || (this.directionY === 1 && this.y >= 0)) {
+          // 手势向上 && 未吸顶destoryStatus true
+          // 到达scroll初始位置，beforeScroll
+          return
+        } else if (this.directionY === 1 && this.y < 0) {
+          e.preventDefault()
         }
       }
       // 触点至少移动10px才会触发scroll的move 并且 移动大于300ms
@@ -394,7 +423,6 @@ export default {
         newY = this.y + deltaY / 3
       }
 
-      // this.moved = true;
       this.translateTo(newX, newY)
       if (timestamp - this.startTime > 300) {
         // 300ms更新一次
@@ -410,6 +438,7 @@ export default {
       if (typeof this.moveCallback === 'function') {
         this.moveCallback()
       }
+
       // 滚动超出时回调
       if (typeof this.beyondFn === 'function') {
         this.beyondStatus = this.scrollDirection === 'horizontal'

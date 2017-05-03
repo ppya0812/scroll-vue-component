@@ -27,13 +27,16 @@
 .scroll-vertical {
     &-inner {
         width: 100%;
-        min-height: 100%;
         // overflow-y: scroll;
         transition-timing-function: cubic-bezier(0.1, 0.57, 0.1, 1);
         transition-duration: 0ms;
         transform: translate(0px, 0px) translateZ(0px);
         backface-visibility: hidden;
         position: relative;
+    }
+    &-item {
+        display: inline-block;
+        width: 100%;
     }
 }
 .scroll-shadow {

@@ -10,6 +10,8 @@
     5. 滚动完成回调 （支持列表头部和列表尾部滚动完成的回调）
     6. 滚动超出边界时回调
     7. 滚动回归边界内部时回调
+    8. 注册自定义事件监听
+    9. 是否全局需要阻止默认滚动
 ```
 ## install
 
@@ -69,6 +71,8 @@ name            |           type |  default   |                        descripti
 --------------- | -------------: | :--------: | :--------------------------------------------------------:
 scrollDirection |         string | horizontal |                 滚动方向(horizontal/vertical)
 refreshStatus   |Boolean, Number |            |                重新更新实例化组件
+destoryStatus   |        Boolean |            |                判断是否全局需要阻止组件滚动
+registerEventName   |    String  |            |                注册自定义事件监听(translate触发)
 scrollToEle     | HTMLDivElement | undefined  |             滚动列表特定元素的domevent(activeEvent： '')
 activeTargetPos |         String |   center   | 所传入的滚动DOM的位置(水平滚动center/left/right, 垂直滚动center/top/bottom)
 moveCallback    |       Function |   i => 0   |                         滚动过程中的回调函数
