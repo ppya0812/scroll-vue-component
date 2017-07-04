@@ -55,6 +55,11 @@ export default {
       type: HTMLDivElement,
       default: undefined
     },
+    scrollToPoint: {
+      // 指定元素滚动到指定位置
+      type: Number,
+      default: undefined
+    },
     moveCallback: {
       // 滚动时回调
       type: Function,
@@ -131,6 +136,11 @@ export default {
       pos.top = pos.top > 0
         ? 0
         : pos.top < this.maxScrollY ? this.maxScrollY : pos.top
+      if (this.scrollToPoint !== 'undefined') {
+        this.translateTo(pos.left, this.scrollToPoint, this.scrollTime, this.EASEING.circular)
+        return
+      }
+
       this.scrollTo(pos.left, pos.top, this.scrollTime, this.EASEING.circular)
     }
   },
@@ -233,17 +243,18 @@ export default {
         : 100
       return `M100 0 C ${x} 5, ${x} 95, 100 100`
     },
-    translateTo (x = 0, y = 0, time = 0) {
+    translateTo (x = 0, y = 0, time = 0, fn) {
       x = Math.round(x)
       y = Math.round(y)
       this.x = x
       this.y = y
+      let transitionDuration = this.transitionDuration || time
       this.scrollerStyle = {
         transform: `translate(${x}px, ${y}px) translateZ(0px)`,
-        transitionDuration: `${this.transitionDuration}ms`
+        transitionDuration: `${transitionDuration}ms`
       }
-      if (this.transitionTimingFunction) {
-        this.scrollerStyle.transitionTimingFunction = this.transitionTimingFunction
+      if (this.transitionTimingFunction || fn) {
+        this.scrollerStyle.transitionTimingFunction = this.transitionTimingFunction || fn
       }
       // 事件注册
       this.registerEvent()
