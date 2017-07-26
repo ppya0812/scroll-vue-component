@@ -65,8 +65,13 @@ export default {
       type: Function,
       default: i => 0
     },
-    moveEndback: {
+    endScrollback: {
       // 滚动停止时时回调
+      type: Function,
+      default: i => 0
+    },
+    moveEndback: {
+      // 触摸停止时时回调
       type: Function,
       default: i => 0
     },
@@ -98,6 +103,9 @@ export default {
       })
     },
     scrollToEle () {
+      if (this.maxScrollX > 0) {
+        return
+      }
       const { scrollToEle, activeTargetPos } = this
       let pos = this.getOffset(scrollToEle)
       pos.left -= this.wrapperOffset.left
@@ -277,9 +285,9 @@ export default {
             ? destX > 0 ? destX === 0 : destX >= that.maxScrollX
             : destY > 0 ? destY === 0 : destY >= that.maxScrollY
           if (
-            typeof that.moveEndback === 'function' && that.moved && endStatus
+            typeof that.endScrollback === 'function' && that.moved && endStatus
           ) {
-            that.moveEndback()
+            that.endScrollback()
           }
           that.translateTo(destX, destY)
           that.resetScroll(that.scrollTime)
@@ -447,7 +455,7 @@ export default {
       }
       // 滚动时回调
       if (typeof this.moveCallback === 'function') {
-        this.moveCallback()
+        this.moveCallback(newX, this.maxScrollX)
       }
 
       // 滚动超出时回调
@@ -480,6 +488,11 @@ export default {
       // 判断是否为点击
       if (!this.moved) {
         return
+      }
+
+      if (typeof this.moveEndback === 'function') {
+        // end 回调
+        this.moveEndback()
       }
 
       if (this.scrollDirection === 'horizontal') {
